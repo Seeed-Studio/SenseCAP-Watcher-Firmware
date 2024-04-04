@@ -30,10 +30,9 @@
 
 #include "view.h"
 
-
 static const char *TAG = "app_main";
 
-#define SENSECAP  "\n\
+#define SENSECAP "\n\
    _____                      _________    ____         \n\
   / ___/___  ____  ________  / ____/   |  / __ \\       \n\
   \\__ \\/ _ \\/ __ \\/ ___/ _ \\/ /   / /| | / /_/ /   \n\
@@ -50,18 +49,18 @@ esp_event_loop_handle_t view_event_handle;
 ESP_EVENT_DEFINE_BASE(CTRL_EVENT_BASE);
 esp_event_loop_handle_t ctrl_event_handle;
 
-static void __view_event_handler(void* handler_args, esp_event_base_t base, int32_t id, void* event_data)
+static void __view_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
     switch (id)
     {
-        case VIEW_EVENT_SHUTDOWN:
-        {
-            ESP_LOGI(TAG, "event: VIEW_EVENT_SHUTDOWN");
-            vTaskDelay(pdMS_TO_TICKS(1000));
-            fflush(stdout);
-            esp_restart();
-            break;
-        }
+    case VIEW_EVENT_SHUTDOWN:
+    {
+        ESP_LOGI(TAG, "event: VIEW_EVENT_SHUTDOWN");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        fflush(stdout);
+        esp_restart();
+        break;
+    }
     default:
         break;
     }
@@ -79,10 +78,10 @@ int board_init(void)
 
     bsp_rgb_init();
 
-    // bsp_codec_init();
+    bsp_codec_init();
     // bsp_codec_volume_set(100, NULL);
     // audio_play_task("/spiffs/echo_en_wake.wav");
-    
+
     return ESP_OK;
 }
 
@@ -103,7 +102,21 @@ int app_init(void)
     // app_sr_start(false);
 
     return ESP_OK;
+}
 
+void task_app_init(void *p_arg)
+{
+    // UI init
+    view_init();
+
+    app_init();
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register_with(view_event_handle,
+                                                             VIEW_EVENT_BASE, VIEW_EVENT_SHUTDOWN,
+                                                             __view_event_handler, NULL, NULL));
+
+    esp_event_post_to(view_event_handle, VIEW_EVENT_BASE, VIEW_EVENT_SCREEN_START, NULL, 0, portMAX_DELAY);
+    vTaskDelete(NULL);
 }
 
 void app_main(void)
@@ -123,31 +136,20 @@ void app_main(void)
         .task_name = "view_event_task",
         .task_priority = 6, // uxTaskPriorityGet(NULL),
         .task_stack_size = 10240,
-        .task_core_id = 0
-    };
+        .task_core_id = 0};
     ESP_ERROR_CHECK(esp_event_loop_create(&view_event_task_args, &view_event_handle));
 
     esp_event_loop_args_t ctrl_event_task_args = {
         .queue_size = 10,
         .task_name = "ctrl_event_task",
         .task_priority = 7,
-        .task_stack_size = 1024*5,
-        .task_core_id = 1
-    };
+        .task_stack_size = 1024 * 5,
+        .task_core_id = 1};
     ESP_ERROR_CHECK(esp_event_loop_create(&ctrl_event_task_args, &ctrl_event_handle));
 
-    // UI init
-    view_init();
-
     // app init
-    app_init();
-
-    ESP_ERROR_CHECK(esp_event_handler_instance_register_with(view_event_handle, 
-                                                        VIEW_EVENT_BASE, VIEW_EVENT_SHUTDOWN, 
-                                                        __view_event_handler, NULL, NULL));
-
-    
-    esp_event_post_to(view_event_handle, VIEW_EVENT_BASE, VIEW_EVENT_SCREEN_START, NULL, 0, portMAX_DELAY);
+    // app_init();
+    xTaskCreatePinnedToCore(task_app_init, "task_app_init", 4096, NULL, 5, NULL, 1);
 
     // struct view_data_wifi_config cfg;
     // memset(&cfg, 0, sizeof(cfg));
@@ -156,12 +158,13 @@ void app_main(void)
     // strcpy( cfg.password,  "seeedrxxxs!");
     // esp_event_post_to(view_event_handle, VIEW_EVENT_BASE, VIEW_EVENT_WIFI_CONNECT, &cfg, sizeof(struct view_data_wifi_config), portMAX_DELAY);
 
-    static char buffer[254];    /* Make sure buffer is enough for `sprintf` */
-    while (1) {
+    static char buffer[254]; /* Make sure buffer is enough for `sprintf` */
+    while (1)
+    {
         sprintf(buffer, "   Biggest /     Free /    Total\n"
-                "\t  DRAM : [%8d / %8d / %8d]\n"
-                "\t  PSRAM : [%8d / %8d / %8d]\n"
-                "\t  DMA : [%8d / %8d / %8d]",
+                        "\t  DRAM : [%8d / %8d / %8d]\n"
+                        "\t  PSRAM : [%8d / %8d / %8d]\n"
+                        "\t  DMA : [%8d / %8d / %8d]",
                 heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
                 heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                 heap_caps_get_total_size(MALLOC_CAP_INTERNAL),
@@ -173,6 +176,7 @@ void app_main(void)
                 heap_caps_get_total_size(MALLOC_CAP_DMA));
 
         ESP_LOGI("MEM", "%s", buffer);
+
         vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }
