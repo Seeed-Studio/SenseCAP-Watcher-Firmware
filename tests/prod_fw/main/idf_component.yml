@@ -1,5 +1,6 @@
 ## IDF Component Manager Manifest File
 dependencies:
+  espressif/console_cmd_ifconfig: "^1.0.1"
   espressif/iperf-cmd: "^0.1.1"
   espressif/console_cmd_ping: "^1.0.0"
   espressif/console_cmd_wifi: "^1.0.1"

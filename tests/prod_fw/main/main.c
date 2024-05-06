@@ -8,11 +8,15 @@
 #include "nvs_flash.h"
 #include "esp_netif.h"
 #include "esp_event.h"
+
+#include "sensecap-watcher.h"
+
 #include "console_wifi.h"
 #include "console_ping.h"
+#include "console_ifconfig.h"
 #include "iperf_cmd.h"
 
-
+#include "console_gpio.h"
 
 void app_main(void)
 {
@@ -31,7 +35,11 @@ void app_main(void)
 
     ESP_ERROR_CHECK(console_cmd_wifi_register());
 
+    ESP_ERROR_CHECK(console_cmd_ifconfig_register());
+
     ESP_ERROR_CHECK(console_cmd_ping_register());
+
+    ESP_ERROR_CHECK(console_cmd_gpio_register());
 
     ESP_ERROR_CHECK(app_register_iperf_commands());
 
