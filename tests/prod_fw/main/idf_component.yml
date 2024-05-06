@@ -7,3 +7,5 @@ dependencies:
   idf: ">=5.0"
   sensecap-watcher:
     override_path: "../../../components/sensecap-watcher"
+  esp_jpeg_simd: 
+    override_path: "../../../components/esp_jpeg_simd"

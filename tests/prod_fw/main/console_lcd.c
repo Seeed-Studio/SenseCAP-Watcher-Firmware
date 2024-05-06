@@ -115,6 +115,11 @@ static esp_err_t lcd_fill_op(lcd_op_t *self, int argc, char *argv[])
 
     uint32_t value = strtol(argv[2], NULL, 16);
 
+    g_canvas = lv_canvas_create(lv_scr_act());
+    lv_canvas_set_buffer(g_canvas, g_cbuf, DRV_LCD_H_RES, DRV_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
+    lv_obj_center(g_canvas);
+    lv_canvas_fill_bg(g_canvas, lv_color_black(), LV_OPA_COVER);
+
     if (lvgl_port_lock(0))
     {
         lv_canvas_fill_bg(g_canvas, lv_color_hex(value), LV_OPA_COVER);
@@ -175,7 +180,11 @@ esp_err_t console_cmd_lcd_register(void)
 
     bsp_io_expander_init();
 
-    g_lvgl_disp = bsp_lvgl_init();
+    g_lvgl_disp = bsp_lvgl_get_disp();
+    if (g_lvgl_disp == NULL)
+    {
+        g_lvgl_disp = bsp_lvgl_init();
+    }
     assert(g_lvgl_disp != NULL);
 
     while (1)
@@ -189,6 +198,7 @@ esp_err_t console_cmd_lcd_register(void)
     assert(g_lvgl_tp != NULL);
 
     g_cbuf = heap_caps_malloc(LV_CANVAS_BUF_SIZE_TRUE_COLOR(DRV_LCD_H_RES, DRV_LCD_V_RES), MALLOC_CAP_SPIRAM);
+
     g_canvas = lv_canvas_create(lv_scr_act());
     lv_canvas_set_buffer(g_canvas, g_cbuf, DRV_LCD_H_RES, DRV_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     lv_obj_center(g_canvas);

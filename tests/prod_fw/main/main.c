@@ -19,6 +19,7 @@
 #include "console_gpio.h"
 #include "console_i2c.h"
 #include "console_lcd.h"
+#include "console_sscma.h"
 
 void app_main(void)
 {
@@ -46,6 +47,8 @@ void app_main(void)
     ESP_ERROR_CHECK(console_cmd_i2c_register());
 
     ESP_ERROR_CHECK(console_cmd_lcd_register());
+
+    ESP_ERROR_CHECK(console_cmd_sscma_register());
 
     ESP_ERROR_CHECK(app_register_iperf_commands());
 
