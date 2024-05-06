@@ -20,6 +20,7 @@
 #include "console_i2c.h"
 #include "console_lcd.h"
 #include "console_sscma.h"
+#include "console_audio.h"
 
 void app_main(void)
 {
@@ -49,6 +50,8 @@ void app_main(void)
     ESP_ERROR_CHECK(console_cmd_lcd_register());
 
     ESP_ERROR_CHECK(console_cmd_sscma_register());
+
+    ESP_ERROR_CHECK(console_cmd_audio_register());
 
     ESP_ERROR_CHECK(app_register_iperf_commands());
 
