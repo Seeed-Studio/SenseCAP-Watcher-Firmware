@@ -17,6 +17,8 @@
 #include "iperf_cmd.h"
 
 #include "console_gpio.h"
+#include "console_i2c.h"
+#include "console_lcd.h"
 
 void app_main(void)
 {
@@ -40,6 +42,10 @@ void app_main(void)
     ESP_ERROR_CHECK(console_cmd_ping_register());
 
     ESP_ERROR_CHECK(console_cmd_gpio_register());
+
+    ESP_ERROR_CHECK(console_cmd_i2c_register());
+
+    ESP_ERROR_CHECK(console_cmd_lcd_register());
 
     ESP_ERROR_CHECK(app_register_iperf_commands());
 

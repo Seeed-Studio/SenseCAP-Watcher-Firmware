@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "console_gpio.c" 
+    SRCS "main.c" "console_gpio.c"  "console_i2c.c" "console_lcd.c"
     INCLUDE_DIRS "."
 )
 

@@ -196,11 +196,7 @@ esp_err_t console_cmd_gpio_register(void)
 
     g_io_expander = bsp_io_expander_init();
 
-    if (g_io_expander == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to initialize IO Expander");
-        return ESP_FAIL;
-    }
+    assert(g_io_expander != NULL);
 
     esp_console_cmd_t command = { .command = "gpio", .help = "Command for gpio operations\n For more info run 'gpio help'", .func = &do_cmd_gpio };
 
