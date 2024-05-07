@@ -11,16 +11,18 @@
 
 #include "sensecap-watcher.h"
 
+#include "iperf_cmd.h"
+
 #include "console_wifi.h"
 #include "console_ping.h"
 #include "console_ifconfig.h"
-#include "iperf_cmd.h"
 
 #include "console_gpio.h"
 #include "console_i2c.h"
 #include "console_lcd.h"
 #include "console_sscma.h"
 #include "console_audio.h"
+#include "console_device.h"
 
 void app_main(void)
 {
@@ -52,6 +54,8 @@ void app_main(void)
     ESP_ERROR_CHECK(console_cmd_sscma_register());
 
     ESP_ERROR_CHECK(console_cmd_audio_register());
+
+    ESP_ERROR_CHECK(console_cmd_device_register());
 
     ESP_ERROR_CHECK(app_register_iperf_commands());
 

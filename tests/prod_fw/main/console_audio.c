@@ -102,12 +102,6 @@ static void audio_play_task(void *arg)
                 free(playback.filename);
                 continue;
             }
-
-            printf("sample rate: %i\n", wav_header.sample_rate);
-            printf("bits per sample: %i\n", wav_header.bits_per_sample);
-            printf("num channels: %i\n", wav_header.num_channels);
-            printf("data size: %i\n", wav_header.data_size);
-
             ESP_LOGI(TAG, "\nPlaying %s ...", playback.filename);
             bsp_codec_set_fs(wav_header.sample_rate, wav_header.bits_per_sample, wav_header.num_channels);
             size_t bytes_send_to_i2s = 0;
