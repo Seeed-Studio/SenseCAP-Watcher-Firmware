@@ -265,10 +265,7 @@ static esp_err_t sscma_model_op(sscma_op_t *self, int argc, char *argv[])
         printf("UUID: %s\n", model->uuid ? model->uuid : "N/A");
         printf("Name: %s\n", model->name ? model->name : "N/A");
         printf("Version: %s\n", model->ver ? model->ver : "N/A");
-        printf("Category: %s\n", model->category ? model->category : "N/A");
-        printf("Algorithm: %s\n", model->algorithm ? model->algorithm : "N/A");
-        printf("Description: %s\n", model->description ? model->description : "N/A");
-
+        printf("URL: %s\n", model->url ? model->url : "N/A");
         printf("Classes:\n");
         if (model->classes[0] != NULL)
         {
@@ -281,10 +278,6 @@ static esp_err_t sscma_model_op(sscma_op_t *self, int argc, char *argv[])
         {
             printf("  N/A\n");
         }
-
-        printf("Token: %s\n", model->token ? model->token : "N/A");
-        printf("URL: %s\n", model->url ? model->url : "N/A");
-        printf("Manufacturer: %s\n", model->manufacturer ? model->manufacturer : "N/A");
     }
     else
     {
