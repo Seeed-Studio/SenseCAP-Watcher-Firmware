@@ -83,7 +83,7 @@ static esp_err_t i2c_scan_op(i2c_op_t *self, int argc, char *argv[])
     }
 
     bsp_i2c_detect(bus);
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -121,7 +121,7 @@ static esp_err_t i2c_write_op(i2c_op_t *self, int argc, char *argv[])
     }
 
     i2c_master_write_to_device(bus, address, value, length % sizeof(value), 1000 / portTICK_PERIOD_MS);
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -158,7 +158,7 @@ static esp_err_t i2c_read_op(i2c_op_t *self, int argc, char *argv[])
     {
         printf("%02x%c", value[i], (i + 1) % 16 == 0 ? '\n' : ' ');
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 

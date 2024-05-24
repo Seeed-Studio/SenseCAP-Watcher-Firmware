@@ -60,7 +60,7 @@ static esp_err_t gpio_help_op(gpio_op_t *self, int argc, char *argv[])
             printf(" %s\n", cmd_list[i].help);
         }
     }
-
+    
     return ESP_OK;
 }
 
@@ -103,7 +103,7 @@ static esp_err_t gpio_set_op(gpio_op_t *self, int argc, char *argv[])
         pin = (1 << (-pin - 1));
         bsp_exp_io_set_level(pin, value);
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -142,7 +142,7 @@ static esp_err_t gpio_get_op(gpio_op_t *self, int argc, char *argv[])
     }
 
     printf("%d\n", value);
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 

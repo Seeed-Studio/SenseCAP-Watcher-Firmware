@@ -24,9 +24,12 @@
 #include "console_audio.h"
 #include "console_device.h"
 #include "console_http.h"
+#include "console_rtc.h"
+#include "console_bat.h"
 
 void app_main(void)
 {
+    ESP_ERROR_CHECK(bsp_rtc_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_err_t ret = nvs_flash_init(); // Initialize NVS
@@ -60,6 +63,12 @@ void app_main(void)
 
     ESP_ERROR_CHECK(app_register_iperf_commands());
 
+    ESP_ERROR_CHECK(console_cmd_rtc_register());
+
+    ESP_ERROR_CHECK(console_cmd_bat_register());
+
     // start console REPL
     ESP_ERROR_CHECK(console_cmd_start());
+    bsp_exp_io_set_level(13, 1);
+    bsp_exp_io_set_level(BSP_SSCMA_CLIENT_RST,1);
 }

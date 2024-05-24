@@ -30,7 +30,7 @@ static lv_disp_t *g_lvgl_disp = NULL;
 static sscma_client_handle_t client = NULL;
 static lv_obj_t *image;
 static uint8_t jpeg_buf[48 * 1024] = { 0 };
-
+static bool is_init=false;
 /**
  * Static registration of this plugin is achieved by defining the plugin description
  * structure and placing it into .console_cmd_desc section.
@@ -52,7 +52,7 @@ static esp_err_t sscma_device_op(sscma_op_t *self, int argc, char *argv[]);
 static esp_err_t sscma_model_op(sscma_op_t *self, int argc, char *argv[]);
 static esp_err_t sscma_preview_op(sscma_op_t *self, int argc, char *argv[]);
 static esp_err_t sscma_invoke_op(sscma_op_t *self, int argc, char *argv[]);
-
+static void do_init(void);
 static const char *TAG = "console_sscma";
 
 static sscma_op_t cmd_list[] = {
@@ -239,7 +239,7 @@ static esp_err_t sscma_device_op(sscma_op_t *self, int argc, char *argv[])
         printf("Software Version: %s\n", (info->sw_ver != NULL) ? info->sw_ver : "NULL");
         printf("Firmware Version: %s\n", (info->fw_ver != NULL) ? info->fw_ver : "NULL");
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -283,7 +283,7 @@ static esp_err_t sscma_model_op(sscma_op_t *self, int argc, char *argv[])
     {
         printf("Get model failed\n");
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -307,6 +307,7 @@ static esp_err_t sscma_preview_op(sscma_op_t *self, int argc, char *argv[])
     {
         printf("Preview failed\n");
     }
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -330,12 +331,18 @@ static esp_err_t sscma_invoke_op(sscma_op_t *self, int argc, char *argv[])
     {
         printf("Invoke failed\n");
     }
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
 /* handle 'sscma' command */
 static esp_err_t do_cmd_sscma(int argc, char **argv)
 {
+    if(!is_init)
+    {
+        do_init();
+        vTaskDelay(5);
+    }    
     int cmd_count = sizeof(cmd_list) / sizeof(cmd_list[0]);
     sscma_op_t cmd;
 
@@ -380,6 +387,47 @@ static esp_err_t do_cmd_sscma(int argc, char **argv)
 esp_err_t console_cmd_sscma_register(void)
 {
     esp_err_t ret;
+    // bsp_io_expander_init();
+    // g_lvgl_disp = bsp_lvgl_get_disp();
+    // if (g_lvgl_disp == NULL)
+    // {
+    //     g_lvgl_disp = bsp_lvgl_init();
+    // }
+    // assert(g_lvgl_disp != NULL);
+    // client = bsp_sscma_client_init();
+    // assert(client != NULL);
+
+    // image = lv_img_create(lv_scr_act());
+    // lv_obj_set_align(image, LV_ALIGN_CENTER);
+    // lv_obj_set_scrollbar_mode(image, LV_SCROLLBAR_MODE_OFF);
+    // lv_obj_clear_flag(image, LV_OBJ_FLAG_SCROLLABLE);
+
+    // const sscma_client_callback_t callback = {
+    //     .on_event = on_event,
+    //     .on_log = on_log,
+    // };
+
+    // if (sscma_client_register_callback(client, &callback, NULL) != ESP_OK)
+    // {
+    //     printf("set callback failed\n");
+    //     abort();
+    // }
+
+    // sscma_client_init(client);
+
+    esp_console_cmd_t command = { .command = "sscma", .help = "Command for sscma operations\n For more info run 'sscma help'", .func = &do_cmd_sscma };
+
+    ret = esp_console_cmd_register(&command);
+    if (ret)
+    {
+        ESP_LOGE(TAG, "Unable to register sscma");
+    }
+
+    return ret;
+}
+
+static void do_init(void)
+{
     bsp_io_expander_init();
     g_lvgl_disp = bsp_lvgl_get_disp();
     if (g_lvgl_disp == NULL)
@@ -407,14 +455,6 @@ esp_err_t console_cmd_sscma_register(void)
     }
 
     sscma_client_init(client);
-
-    esp_console_cmd_t command = { .command = "sscma", .help = "Command for sscma operations\n For more info run 'sscma help'", .func = &do_cmd_sscma };
-
-    ret = esp_console_cmd_register(&command);
-    if (ret)
-    {
-        ESP_LOGE(TAG, "Unable to register sscma");
-    }
-
-    return ret;
+    is_init=true;
+    return ;
 }

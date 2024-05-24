@@ -78,6 +78,7 @@ static esp_err_t device_get_ip_op(device_op_t *self, int argc, char *argv[])
 {
     // TODO
     printf("ip: 0.0.0.0\n");
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -100,7 +101,7 @@ static esp_err_t device_get_mac_op(device_op_t *self, int argc, char *argv[])
     {
         printf("bt  mac: " MACSTR "\n", MAC2STR(bt_mac));
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 

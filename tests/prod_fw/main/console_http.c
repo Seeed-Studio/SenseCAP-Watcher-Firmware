@@ -544,6 +544,7 @@ esp_err_t start_file_server(const char *base_path)
 static esp_err_t do_cmd_http(int argc, char **argv)
 {
     start_file_server(DRV_BASE_PATH_SD);
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 

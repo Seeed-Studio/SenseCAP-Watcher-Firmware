@@ -176,7 +176,7 @@ static esp_err_t wifi_show_op(wifi_op_t *self, int argc, char *argv[])
         }
         return ESP_OK;
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -208,7 +208,7 @@ static esp_err_t wifi_sta_join_op(wifi_op_t *self, int argc, char *argv[])
         ESP_LOGE(TAG, "Error: Wifi Connection timed out");
         return ESP_OK;
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -225,7 +225,7 @@ static esp_err_t wifi_sta_leave_op(wifi_op_t *self, int argc, char *argv[])
 
     esp_wifi_disconnect();
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -275,8 +275,11 @@ static esp_err_t do_cmd_wifi(int argc, char **argv)
  */
 esp_err_t console_cmd_wifi_register(void)
 {
+    wifi_config_t wifi_config = { 0 };
+    strlcpy((char *)wifi_config.sta.ssid, "STU-TE", sizeof(wifi_config.sta.ssid));
+    strlcpy((char *)wifi_config.sta.password, "seeedkey968", sizeof(wifi_config.sta.password));
     wifi_init();
-
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     esp_wifi_connect();
 
     esp_err_t ret;

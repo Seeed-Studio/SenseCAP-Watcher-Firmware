@@ -33,7 +33,7 @@ typedef struct __attribute__((packed))
     uint32_t data_size;
     uint8_t data[];
 } dumb_wav_header_t;
-
+static bool is_init=false;
 /**
  * Static registration of this plugin is achieved by defining the plugin description
  * structure and placing it into .console_cmd_desc section.
@@ -55,7 +55,7 @@ static esp_err_t audio_play_op(audio_op_t *self, int argc, char *argv[]);
 static esp_err_t audio_record_op(audio_op_t *self, int argc, char *argv[]);
 static esp_err_t audio_volume_op(audio_op_t *self, int argc, char *argv[]);
 static esp_err_t audio_mute_op(audio_op_t *self, int argc, char *argv[]);
-
+static void do_init(void);
 static const char *TAG = "console_audio";
 
 typedef struct
@@ -197,7 +197,7 @@ static esp_err_t audio_play_op(audio_op_t *self, int argc, char *argv[])
         ESP_LOGE(TAG, "Busy...");
         return ESP_OK;
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -213,7 +213,7 @@ static esp_err_t audio_record_op(audio_op_t *self, int argc, char *argv[])
         ESP_LOGE(TAG, "Busy...");
         return ESP_OK;
     }
-
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -221,6 +221,7 @@ static esp_err_t audio_volume_op(audio_op_t *self, int argc, char *argv[])
 {
     int volume = atoi(argv[2]);
     bsp_codec_volume_set(volume, NULL);
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -228,6 +229,7 @@ static esp_err_t audio_mute_op(audio_op_t *self, int argc, char *argv[])
 {
     int mute = atoi(argv[2]);
     bsp_codec_mute_set(mute == 0 ? false : true);
+    printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }
 
@@ -240,7 +242,11 @@ static esp_err_t do_cmd_audio(int argc, char **argv)
     for (int i = 0; i < cmd_count; i++)
     {
         cmd = cmd_list[i];
-
+        if(!is_init)
+        {
+            do_init();
+            vTaskDelay(5);
+        }
         if (argc < cmd.start_index + 1)
         {
             continue;
@@ -279,6 +285,36 @@ esp_err_t console_cmd_audio_register(void)
 {
     esp_err_t ret;
 
+    // bsp_io_expander_init();
+
+    // bsp_spiffs_init_default();
+    // bsp_sdcard_init_default();
+
+    // bsp_codec_init();
+    // bsp_codec_volume_set(DEFAULT_VOLUME, NULL);
+
+    // audio_play_q = xQueueCreate(1, sizeof(playback_t));
+    // assert(audio_play_q != NULL);
+
+    // audio_record_q = xQueueCreate(1, sizeof(recording_t));
+    // assert(audio_record_q != NULL);
+
+    // assert(xTaskCreate(audio_play_task, "audio_play_task", 4096, NULL, 6, NULL) == pdPASS);
+    // assert(xTaskCreate(audio_record_task, "audio_record_task", 4096, NULL, 6, NULL) == pdPASS);
+
+    esp_console_cmd_t command = { .command = "audio", .help = "Command for audio operations\n For more info run 'audio help'", .func = &do_cmd_audio };
+
+    ret = esp_console_cmd_register(&command);
+    if (ret)
+    {
+        ESP_LOGE(TAG, "Unable to register audio");
+    }
+
+    return ret;
+}
+
+static void do_init(void)
+{
     bsp_io_expander_init();
 
     bsp_spiffs_init_default();
@@ -295,14 +331,8 @@ esp_err_t console_cmd_audio_register(void)
 
     assert(xTaskCreate(audio_play_task, "audio_play_task", 4096, NULL, 6, NULL) == pdPASS);
     assert(xTaskCreate(audio_record_task, "audio_record_task", 4096, NULL, 6, NULL) == pdPASS);
+    
+    is_init=true;
+    return ;
 
-    esp_console_cmd_t command = { .command = "audio", .help = "Command for audio operations\n For more info run 'audio help'", .func = &do_cmd_audio };
-
-    ret = esp_console_cmd_register(&command);
-    if (ret)
-    {
-        ESP_LOGE(TAG, "Unable to register audio");
-    }
-
-    return ret;
 }
