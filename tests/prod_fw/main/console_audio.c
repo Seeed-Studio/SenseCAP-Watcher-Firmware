@@ -208,6 +208,8 @@ static esp_err_t audio_record_op(audio_op_t *self, int argc, char *argv[])
     recording.filename = strdup(argv[2]);
     recording.seconds = atoi(argv[3]);
 
+    remove(recording.filename);
+
     if (xQueueSend(audio_record_q, &recording, pdMS_TO_TICKS(100)) != pdPASS)
     {
         ESP_LOGE(TAG, "Busy...");
