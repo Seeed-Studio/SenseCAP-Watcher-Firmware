@@ -40,6 +40,7 @@ typedef struct gpio_op_t
 static esp_err_t gpio_help_op(gpio_op_t *self, int argc, char *argv[]);
 static esp_err_t gpio_set_op(gpio_op_t *self, int argc, char *argv[]);
 static esp_err_t gpio_get_op(gpio_op_t *self, int argc, char *argv[]);
+static esp_err_t gpio_encoder_op(gpio_op_t *self, int argc, char *argv[]); /* add line songzhao */
 
 static const char *TAG = "console_gpio";
 
@@ -47,6 +48,7 @@ static gpio_op_t cmd_list[] = {
     { .name = "help", .operation = gpio_help_op, .arg_cnt = 2, .start_index = 1, .help = "gpio help: Prints the help text for all gpio commands" },
     { .name = "set", .operation = gpio_set_op, .arg_cnt = 4, .start_index = 1, .help = "gpio set <pin number> <value>: Sets the value of the given pin." },
     { .name = "get", .operation = gpio_get_op, .arg_cnt = 3, .start_index = 1, .help = "gpio get <pin number>: Gets the value of the given pin." },
+    { .name = "encoder", .operation = gpio_encoder_op, .arg_cnt = 5, .start_index = 1, .help = "gpio encoder <pin1> <pin2> <pin3>: Gets the values of specified encoder pins" }, /* add line songzhao */
 };
 
 static esp_err_t gpio_help_op(gpio_op_t *self, int argc, char *argv[])
@@ -60,8 +62,24 @@ static esp_err_t gpio_help_op(gpio_op_t *self, int argc, char *argv[])
             printf(" %s\n", cmd_list[i].help);
         }
     }
-    
+
     return ESP_OK;
+}
+
+// 辅助函数，用于根据引脚号读取电平
+static int read_gpio_pin_level(int pin)
+{
+    if (pin >= 0)
+    {
+        gpio_config_t io_conf = { .intr_type = GPIO_INTR_DISABLE, .mode = GPIO_MODE_INPUT, .pull_down_en = GPIO_PULLDOWN_DISABLE, .pull_up_en = GPIO_PULLUP_DISABLE, .pin_bit_mask = 1ULL << pin };
+        gpio_config(&io_conf);
+        return gpio_get_level(pin);
+    }
+    else
+    {
+        pin = (1 << (-pin - 1));
+        return bsp_exp_io_get_level(pin);
+    }
 }
 
 static esp_err_t gpio_set_op(gpio_op_t *self, int argc, char *argv[])
@@ -75,7 +93,7 @@ static esp_err_t gpio_set_op(gpio_op_t *self, int argc, char *argv[])
     int pin = atoi(argv[2]);
     int value = atoi(argv[3]);
 
-    if (pin <= -16 || pin >= GPIO_NUM_MAX)
+    if (pin < -16 || pin >= GPIO_NUM_MAX)
     {
         ESP_LOGE(TAG, "Invalid pin number: %d (-16 - %d)", pin, GPIO_NUM_MAX - 1);
         return ESP_ERR_INVALID_ARG;
@@ -123,25 +141,41 @@ static esp_err_t gpio_get_op(gpio_op_t *self, int argc, char *argv[])
         ESP_LOGE(TAG, "Invalid pin number: %d (-16 - %d)", pin, GPIO_NUM_MAX - 1);
         return ESP_ERR_INVALID_ARG;
     }
-
-    if (pin >= 0)
-    {
-        gpio_config_t io_conf;
-        io_conf.intr_type = GPIO_INTR_DISABLE;
-        io_conf.mode = GPIO_MODE_INPUT;
-        io_conf.pin_bit_mask = 1ULL << pin;
-        io_conf.pull_down_en = 0;
-        io_conf.pull_up_en = 0;
-        gpio_config(&io_conf);
-        value = gpio_get_level(pin);
-    }
-    else
-    {
-        pin = (1 << (-pin - 1));
-        value = bsp_exp_io_get_level(pin);
-    }
-
+    value=read_gpio_pin_level(pin);
     printf("%d\n", value);
+    printf("Seeed cmd test over\r\n");
+    return ESP_OK;
+}
+
+
+
+/* add by songzhao */
+
+static esp_err_t gpio_encoder_op(gpio_op_t *self, int argc, char *argv[])
+{
+    if (argc < 5)
+    {
+        ESP_LOGE(TAG, "Usage: gpio encoder <pin1> <pin2> <pin3>");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int pin1 = atoi(argv[2]);
+    int pin2 = atoi(argv[3]);
+    int pin3 = atoi(argv[4]);
+
+    // 读取并打印第一个引脚电平
+    int value1 = read_gpio_pin_level(pin1);
+    // printf("Pin %d: %d ", pin1, value1);
+
+    // 读取并打印第二个引脚电平
+    int value2 = read_gpio_pin_level(pin2);
+    // printf("Pin %d: %d ", pin2, value2);
+
+    // 读取并打印第三个引脚电平
+    int value3 = read_gpio_pin_level(pin3);
+    // printf("Pin %d: %d\n", pin3, value3);
+
+    printf("encoder value: %d , %d , %d\n", value1, value2, value3);
     printf("Seeed cmd test over\r\n");
     return ESP_OK;
 }

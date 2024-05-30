@@ -439,7 +439,7 @@ esp_err_t bsp_rtc_set_timer(uint32_t time_in_sec)
 {
     esp_err_t ret = ESP_OK;
 
-    if ((time_in_sec > 255 * 60) || (time_in_sec < 15))
+    if ((time_in_sec > 255 * 60) || (time_in_sec < 3))
     {
         ESP_LOGE(TAG, "RTC set timer - out of range");
         return ESP_ERR_INVALID_ARG;
