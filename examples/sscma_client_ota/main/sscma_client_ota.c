@@ -169,7 +169,7 @@ void app_main(void)
         {
             ESP_LOGI(TAG, "open firmware.img success\n");
             size_t len = 0;
-            char buf[128] = { 0 };
+            char buf[256] = { 0 };
             do
             {
                 memset(buf, 0, sizeof(buf));
@@ -227,7 +227,7 @@ void app_main(void)
         {
             ESP_LOGI(TAG, "open gesture.tflite success\n");
             size_t len = 0;
-            char buf[128] = { 0 };
+            char buf[256] = { 0 };
             do
             {
                 memset(buf, 0, sizeof(buf));

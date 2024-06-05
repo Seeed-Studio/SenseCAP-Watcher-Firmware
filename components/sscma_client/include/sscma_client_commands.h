@@ -41,6 +41,7 @@
 #define CMD_AT_SENSOR     "SENSOR"
 #define CMD_AT_ACTION     "ACTION"
 #define CMD_AT_LED        "LED"
+#define CMD_AT_OTA        "OTA"
 
 #define EVENT_INVOKE     "INVOKE"
 #define EVENT_SAMPLE     "SAMPLE"

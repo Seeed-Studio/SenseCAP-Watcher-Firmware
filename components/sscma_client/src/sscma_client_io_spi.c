@@ -66,8 +66,7 @@ esp_err_t sscma_client_new_io_spi_bus(sscma_client_spi_bus_handle_t bus, const s
     ESP_GOTO_ON_FALSE(spi_client_io, ESP_ERR_NO_MEM, err, TAG, "no mem for spi client io");
 
     spi_device_interface_config_t dev_config = {
-        .flags = SPI_DEVICE_HALFDUPLEX | (io_config->flags.lsb_first ? SPI_DEVICE_TXBIT_LSBFIRST : 0) | (io_config->flags.sio_mode ? SPI_DEVICE_3WIRE : 0)
-                 | (io_config->flags.cs_high_active ? SPI_DEVICE_POSITIVE_CS : 0),
+        .flags = (io_config->flags.lsb_first ? SPI_DEVICE_TXBIT_LSBFIRST : 0) | (io_config->flags.sio_mode ? SPI_DEVICE_3WIRE : 0) | (io_config->flags.cs_high_active ? SPI_DEVICE_POSITIVE_CS : 0),
         .clock_speed_hz = io_config->pclk_hz,
         .mode = io_config->spi_mode,
         .spics_io_num = io_config->cs_gpio_num,
@@ -108,6 +107,7 @@ esp_err_t sscma_client_new_io_spi_bus(sscma_client_spi_bus_handle_t bus, const s
     spi_client_io->base.read = client_io_spi_read;
     spi_client_io->base.available = client_io_spi_available;
     spi_client_io->base.flush = client_io_spi_flush;
+    spi_client_io->base.handle = spi_client_io->spi_dev;
 
     spi_client_io->lock = xSemaphoreCreateMutex();
     ESP_GOTO_ON_FALSE(spi_client_io->lock, ESP_ERR_NO_MEM, err, TAG, "no mem for mutex");
@@ -345,7 +345,7 @@ static esp_err_t client_io_spi_read(sscma_client_io_t *io, void *data, size_t le
                     chunk_size = trans_len;
                     spi_trans.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
                 }
-                spi_trans.length = 0;
+                spi_trans.length = chunk_size * 8;
                 spi_trans.tx_buffer = NULL;
                 spi_trans.rxlength = chunk_size * 8;
                 spi_trans.user = spi_client_io;
@@ -414,7 +414,7 @@ static esp_err_t client_io_spi_read(sscma_client_io_t *io, void *data, size_t le
                     chunk_size = trans_len;
                     spi_trans.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
                 }
-                spi_trans.length = 0;
+                spi_trans.length = chunk_size * 8;
                 spi_trans.tx_buffer = NULL;
                 spi_trans.rxlength = chunk_size * 8;
                 spi_trans.user = spi_client_io;
@@ -513,7 +513,7 @@ static esp_err_t client_io_spi_available(sscma_client_io_t *io, size_t *len)
     }
     while (trans_len > 0);
 
-    spi_trans.length = 0;
+    spi_trans.length = 2 * 8;
     spi_trans.tx_buffer = NULL;
     spi_trans.rxlength = 2 * 8; // 8 bits per byte
     spi_trans.rx_buffer = spi_client_io->buffer;

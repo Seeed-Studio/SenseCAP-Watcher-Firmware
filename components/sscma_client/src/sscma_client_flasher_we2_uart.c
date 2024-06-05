@@ -488,7 +488,7 @@ esp_err_t xmodem_abort(sscma_client_flasher_we2_uart_t *flasher)
     return ret;
 }
 
-esp_err_t sscma_client_new_flasher_we2(const sscma_client_io_handle_t io, const sscma_client_flasher_we2_config_t *config, sscma_client_flasher_handle_t *ret_flasher)
+esp_err_t sscma_client_new_flasher_we2_uart(const sscma_client_io_handle_t io, const sscma_client_flasher_we2_config_t *config, sscma_client_flasher_handle_t *ret_flasher)
 {
     esp_err_t ret = ESP_OK;
     sscma_client_flasher_we2_uart_t *flasher_we2 = NULL;

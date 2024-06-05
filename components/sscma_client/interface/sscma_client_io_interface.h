@@ -15,6 +15,11 @@ typedef struct sscma_client_io_t sscma_client_io_t; /*!< Type of SSCMA client IO
 struct sscma_client_io_t
 {
     /**
+     * @brief Bus handle
+     */
+    void *handle;
+
+    /**
      * @brief Destory SCCMA client
      *
      * @param[in] io SCCMA client handle]

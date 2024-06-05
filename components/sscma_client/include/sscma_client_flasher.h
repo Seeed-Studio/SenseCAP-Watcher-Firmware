@@ -40,7 +40,20 @@ typedef struct
  *          - ESP_OK                on success
  */
 
-esp_err_t sscma_client_new_flasher_we2(const sscma_client_io_handle_t io, const sscma_client_flasher_we2_config_t *flasher_config, sscma_client_flasher_handle_t *ret_flasher);
+esp_err_t sscma_client_new_flasher_we2_uart(const sscma_client_io_handle_t io, const sscma_client_flasher_we2_config_t *flasher_config, sscma_client_flasher_handle_t *ret_flasher);
+
+/**
+ * @brief Create SSCMA flasher, for WE2
+ *
+ * @param[in] io IO handle
+ * @param[in] flasher_config Flasher configuration, for WE2
+ * @param[out] ret_io Returned flasher handle
+ * @return
+ *          - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *          - ESP_ERR_NO_MEM        if out of memory
+ *          - ESP_OK                on success
+ */
+esp_err_t sscma_client_new_flasher_we2_spi(const sscma_client_io_handle_t io, const sscma_client_flasher_we2_config_t *config, sscma_client_flasher_handle_t *ret_flasher);
 
 #ifdef __cplusplus
 }
