@@ -23,7 +23,7 @@
 #include "sscma_client_flasher.h"
 #include "sscma_client_flasher_interface.h"
 
-static const char *TAG = "sscma_client.flasher.we2";
+static const char *TAG = "sscma_client.flasher.we2.uart";
 
 #define OTA_ENTER_CMD     "1"
 #define OTA_ENTER_HINT    "Send data using the xmodem protocol from your terminal"
@@ -114,7 +114,7 @@ typedef struct
     } rx_buffer, tx_buffer; /* !< RX and TX buffer */
     uint32_t xfer_size;
     uint8_t write_block_retries; /*!< The write block retries. */
-} sscma_client_flasher_we2_t;
+} sscma_client_flasher_we2_uart_t;
 
 static inline bool xmodem_calculate_crc(const uint8_t *data, const uint32_t size, uint16_t *result)
 {
@@ -168,7 +168,7 @@ static inline bool xmodem_verify_packet(const xmodem_packet_t packet, uint8_t ex
     return status;
 }
 
-static inline bool xmodem_timeout(sscma_client_flasher_we2_t *flasher_we2, int64_t timeout)
+static inline bool xmodem_timeout(sscma_client_flasher_we2_uart_t *flasher_we2, int64_t timeout)
 {
     if (esp_timer_get_time() - flasher_we2->cur_time >= (timeout * 1000))
     {
@@ -180,7 +180,7 @@ static inline bool xmodem_timeout(sscma_client_flasher_we2_t *flasher_we2, int64
     return false;
 }
 
-static xmodem_state_t xmodem_process(sscma_client_flasher_we2_t *flasher)
+static xmodem_state_t xmodem_process(sscma_client_flasher_we2_uart_t *flasher)
 {
     uint8_t response = 0;
     uint8_t ctrl = 0;
@@ -337,7 +337,7 @@ static xmodem_state_t xmodem_process(sscma_client_flasher_we2_t *flasher)
         case ABORT_TRANSFER: {
             ctrl = XCAN;
             sscma_client_io_write(flasher->io, (uint8_t *)&ctrl, sizeof(char));
-            flasher->state = FAILED;
+            flasher->state = FINAL;
             break;
         }
         case TIMEOUT_EOT: {
@@ -357,7 +357,7 @@ static xmodem_state_t xmodem_process(sscma_client_flasher_we2_t *flasher)
     return flasher->state;
 }
 
-esp_err_t xmodem_start(sscma_client_flasher_we2_t *flasher)
+esp_err_t xmodem_start(sscma_client_flasher_we2_uart_t *flasher)
 {
     esp_err_t ret = ESP_OK;
 
@@ -387,7 +387,7 @@ esp_err_t xmodem_start(sscma_client_flasher_we2_t *flasher)
     return ret;
 }
 
-esp_err_t xmodem_write(sscma_client_flasher_we2_t *flasher, const void *data, size_t len)
+esp_err_t xmodem_write(sscma_client_flasher_we2_uart_t *flasher, const void *data, size_t len)
 {
     esp_err_t ret = ESP_OK;
 
@@ -420,7 +420,7 @@ esp_err_t xmodem_write(sscma_client_flasher_we2_t *flasher, const void *data, si
     return ret;
 }
 
-esp_err_t xmodem_finish(sscma_client_flasher_we2_t *flasher)
+esp_err_t xmodem_finish(sscma_client_flasher_we2_uart_t *flasher)
 {
     esp_err_t ret = ESP_OK;
 
@@ -454,7 +454,7 @@ esp_err_t xmodem_finish(sscma_client_flasher_we2_t *flasher)
     return ret;
 }
 
-esp_err_t xmodem_abort(sscma_client_flasher_we2_t *flasher)
+esp_err_t xmodem_abort(sscma_client_flasher_we2_uart_t *flasher)
 {
     esp_err_t ret = ESP_OK;
 
@@ -491,11 +491,11 @@ esp_err_t xmodem_abort(sscma_client_flasher_we2_t *flasher)
 esp_err_t sscma_client_new_flasher_we2(const sscma_client_io_handle_t io, const sscma_client_flasher_we2_config_t *config, sscma_client_flasher_handle_t *ret_flasher)
 {
     esp_err_t ret = ESP_OK;
-    sscma_client_flasher_we2_t *flasher_we2 = NULL;
+    sscma_client_flasher_we2_uart_t *flasher_we2 = NULL;
 
     ESP_RETURN_ON_FALSE(io && config && ret_flasher, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
 
-    flasher_we2 = (sscma_client_flasher_we2_t *)calloc(1, sizeof(sscma_client_flasher_we2_t));
+    flasher_we2 = (sscma_client_flasher_we2_uart_t *)calloc(1, sizeof(sscma_client_flasher_we2_uart_t));
 
     ESP_RETURN_ON_FALSE(flasher_we2, ESP_ERR_NO_MEM, TAG, "no mem for flasher");
 
@@ -578,7 +578,7 @@ err:
 
 esp_err_t sscma_client_flasher_we2_del(sscma_client_flasher_handle_t flasher)
 {
-    sscma_client_flasher_we2_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_t, base);
+    sscma_client_flasher_we2_uart_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_uart_t, base);
     if (flasher_we2->rx_buffer.data)
     {
         free(flasher_we2->rx_buffer.data);
@@ -610,7 +610,7 @@ static esp_err_t sscma_client_flasher_we2_start(sscma_client_flasher_handle_t fl
     esp_err_t ret = ESP_OK;
     int64_t start = 0;
     size_t rlen = 0;
-    sscma_client_flasher_we2_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_t, base);
+    sscma_client_flasher_we2_uart_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_uart_t, base);
 
     xSemaphoreTake(flasher_we2->lock, portMAX_DELAY);
 
@@ -764,7 +764,9 @@ err:
 static esp_err_t sscma_client_flasher_we2_write(sscma_client_flasher_handle_t flasher, const void *data, size_t len)
 {
     esp_err_t ret = ESP_OK;
-    sscma_client_flasher_we2_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_t, base);
+    sscma_client_flasher_we2_uart_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_uart_t, base);
+
+    assert(len % XMODEM_BLOCK_SIZE == 0);
 
     xSemaphoreTake(flasher_we2->lock, portMAX_DELAY);
 
@@ -779,7 +781,7 @@ static esp_err_t sscma_client_flasher_we2_finish(sscma_client_flasher_handle_t f
     esp_err_t ret = ESP_OK;
     int64_t start = 0;
     size_t rlen = 0;
-    sscma_client_flasher_we2_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_t, base);
+    sscma_client_flasher_we2_uart_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_uart_t, base);
 
     xSemaphoreTake(flasher_we2->lock, portMAX_DELAY);
 
@@ -853,7 +855,7 @@ err:
 static esp_err_t sscma_client_flasher_we2_abort(sscma_client_flasher_handle_t flasher)
 {
     esp_err_t ret = ESP_OK;
-    sscma_client_flasher_we2_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_t, base);
+    sscma_client_flasher_we2_uart_t *flasher_we2 = __containerof(flasher, sscma_client_flasher_we2_uart_t, base);
 
     xSemaphoreTake(flasher_we2->lock, portMAX_DELAY);
 
