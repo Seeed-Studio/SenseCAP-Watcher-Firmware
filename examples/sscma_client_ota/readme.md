@@ -16,9 +16,9 @@ pip3 install python-sscma
 
 ```
 sscma.cli flasher --sn
-sscma.cli flasher -f firware.img
+sscma.cli flasher -f firmware.img
 sscma.cli flasher -f person.tflite --offset 0x400000
-sscma.cli flasher -f apple.tflite --offset 0x600000
+sscma.cli flasher -f pet.tflite --offset 0x600000
 sscma.cli flasher -f gesture.tflite --offset 0x800000
 sscma.cli flasher -f human_pose.tflite.tflite --offset 0xA00000
 ```
