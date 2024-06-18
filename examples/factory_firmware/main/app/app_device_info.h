@@ -45,5 +45,6 @@ uint16_t get_spiffs_free_size(int caller);
 uint16_t get_sdcard_total_size(int caller);
 uint16_t get_sdcard_free_size(int caller);
 
+void app_device_info_init_early();
 void app_device_info_init();
 

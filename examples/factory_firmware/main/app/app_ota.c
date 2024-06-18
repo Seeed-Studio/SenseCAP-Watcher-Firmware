@@ -40,12 +40,17 @@ ESP_EVENT_DEFINE_BASE(OTA_EVENT_BASE);
 #define SSCMA_FLASH_CHUNK_SIZE_UART     128   //this value is copied from the `sscma_client_ota` example
 #define AI_MODEL_RINGBUFF_SIZE          102400
 
+//event group events
+#define EVENT_OTA_STOP_BY_TOO_SLOW      BIT0
+#define EVENT_OTA_HIMAX_HTTP_GOING      BIT1
+#define EVENT_AI_MODEL_DL_PREPARING     BIT2
+#define EVENT_AI_MODEL_DL_EARLY_ABORT   BIT3
+
 enum {
     OTA_TYPE_ESP32 = 1,
     OTA_TYPE_HIMAX,
     OTA_TYPE_AI_MODEL
 };
-
 
 static const char *TAG = "ota";
 
@@ -62,11 +67,12 @@ static SemaphoreHandle_t g_sem_network;
 static SemaphoreHandle_t g_sem_ai_model_downloaded;
 static SemaphoreHandle_t g_sem_worker_done;
 static SemaphoreHandle_t g_sem_sscma_writer_done;
+static EventGroupHandle_t g_eg_globalsync;
 static esp_err_t g_result_err;
 static char *g_cur_ota_version_esp32;
 static char *g_cur_ota_version_himax;
 
-static QueueHandle_t g_Q_ota_cmd;
+static QueueHandle_t g_Q_ota_job;
 static QueueHandle_t g_Q_ota_msg;
 static QueueHandle_t g_Q_ota_status;
 static RingbufHandle_t g_rb_ai_model;
@@ -93,7 +99,11 @@ static void __ota_event_handler(void *handler_args, esp_event_base_t base, int32
             worker_data->err = esp_ota_get_partition_description(worker_data->partition, worker_data->app_desc);
             break;
         case CMD_esp_https_ota_perform:
+            // this call may block the eventloop for quite a while (30sec), but since the device is showing the OTA UI,
+            // the background activities are not sensitive to the users.
+            // ESP_LOGD(TAG, "worker_call: esp_https_ota_perform");
             worker_data->err = esp_https_ota_perform(*(worker_data->ota_handle));
+            // ESP_LOGD(TAG, "worker_call: esp_https_ota_perform done, 0x%x", worker_data->err);
             break;
         case CMD_esp_https_ota_finish:
             worker_data->err = esp_https_ota_finish(*(worker_data->ota_handle));
@@ -107,8 +117,13 @@ static void __ota_event_handler(void *handler_args, esp_event_base_t base, int32
 
 static void worker_call(ota_worker_task_data_t *worker_data, int cmd)
 {
-    esp_event_post_to(app_event_loop_handle, OTA_EVENT_BASE, cmd,
-                      &worker_data, sizeof(ota_worker_task_data_t *),  pdMS_TO_TICKS(10000));
+    if(esp_event_post_to(app_event_loop_handle, OTA_EVENT_BASE, cmd,
+                      &worker_data, sizeof(ota_worker_task_data_t *),  pdMS_TO_TICKS(10000)) != ESP_OK)
+    {
+        ESP_LOGW(TAG, "worker_call failed, maybe eventloop full?");
+        worker_data->err = ESP_ERR_OTA_WORKERCALL_ERR;
+        return;
+    } 
     xSemaphoreTake(g_sem_worker_done, portMAX_DELAY);
 }
 
@@ -213,6 +228,7 @@ static void esp32_ota_process(char *url)
 
     ESP_LOGI(TAG, "esp32 ota connection established, start downloading ...");
     ota_status.status = OTA_STATUS_DOWNLOADING;
+    ota_status.err_code = ESP_OK;
     ota_status.percentage = 0;
     esp_event_post_to(app_event_loop_handle, CTRL_EVENT_BASE, CTRL_EVENT_OTA_ESP32_FW,
                         &ota_status, sizeof(struct view_data_ota_status),
@@ -253,6 +269,9 @@ static void esp32_ota_process(char *url)
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
             break;
         }
+        if (xEventGroupWaitBits(g_eg_globalsync, EVENT_OTA_STOP_BY_TOO_SLOW, pdTRUE, pdTRUE, 0) & EVENT_OTA_STOP_BY_TOO_SLOW)
+            break;
+
         // esp_https_ota_perform returns after every read operation which gives user the ability to
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
@@ -651,7 +670,16 @@ static void sscma_ota_process(uint32_t ota_type, char *url)
     g_sscma_writer_userdata.http_client = http_client;
     g_sscma_writer_userdata.err = ESP_OK;
 
+    //breakpoint to check if user canceled, this is the last chance to do early abortion
+    if (xEventGroupGetBits(g_eg_globalsync) & EVENT_AI_MODEL_DL_EARLY_ABORT) {
+        ret = ESP_ERR_OTA_USER_CANCELED;
+        goto sscma_ota_end;
+    }
+    xEventGroupClearBits(g_eg_globalsync, EVENT_AI_MODEL_DL_PREPARING); //clear this bit regardless ai model dl or himax fw dl
+
+    xEventGroupSetBits(g_eg_globalsync, EVENT_OTA_HIMAX_HTTP_GOING);
     esp_err_t err = esp_http_client_perform(http_client);
+    xEventGroupClearBits(g_eg_globalsync, EVENT_OTA_HIMAX_HTTP_GOING);
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "sscma ota, HTTP GET Status = %d, content_length = %"PRId64", take %lld us",
                 esp_http_client_get_status_code(http_client),
@@ -696,7 +724,7 @@ sscma_ota_end:
 
 static void __app_ota_task(void *p_arg)
 {
-    ota_cmd_q_item_t *cmd = psram_calloc(1, sizeof(ota_cmd_q_item_t));  //never mind not releasing this
+    ota_job_q_item_t *otajob = psram_calloc(1, sizeof(ota_job_q_item_t));  //never mind not releasing this
     uint32_t ota_type;
 
     ESP_LOGI(TAG, "starting ota task ...");
@@ -714,24 +742,24 @@ static void __app_ota_task(void *p_arg)
         vTaskDelay(pdMS_TO_TICKS(3000));
 
         do {
-            if (xQueuePeek(g_Q_ota_cmd, cmd, portMAX_DELAY)) {
-                ota_type = cmd->ota_type;
+            if (xQueuePeek(g_Q_ota_job, otajob, portMAX_DELAY)) {
+                ota_type = otajob->ota_type;
 
                 atomic_store(&g_ota_running, true);
                 if (ota_type == OTA_TYPE_ESP32) {
                     //xTaskNotifyGive(g_task_worker);  // wakeup the task
-                    esp32_ota_process(cmd->url);
+                    esp32_ota_process(otajob->url);
                 } else if (ota_type == OTA_TYPE_HIMAX) {
-                    sscma_ota_process(OTA_TYPE_HIMAX, cmd->url);
+                    sscma_ota_process(OTA_TYPE_HIMAX, otajob->url);
                 } else if (ota_type == OTA_TYPE_AI_MODEL) {
-                    sscma_ota_process(OTA_TYPE_AI_MODEL, cmd->url);
+                    sscma_ota_process(OTA_TYPE_AI_MODEL, otajob->url);
                     xSemaphoreGive(g_sem_ai_model_downloaded);
                 } else {
                     ESP_LOGW(TAG, "unknown ota type: %" PRIu32, ota_type);
                 }
                 atomic_store(&g_ota_running, false);
 
-                xQueueReceive(g_Q_ota_cmd, cmd, portMAX_DELAY);
+                xQueueReceive(g_Q_ota_job, otajob, portMAX_DELAY);
             }
         } while (atomic_load(&g_network_connected_flag));
     }
@@ -792,14 +820,27 @@ static esp_err_t ota_status(int ota_event_type, int total_progress)
     esp_err_t ret = ESP_FAIL;
     ota_status_q_item_t ota_status_q_item;
     struct view_data_ota_status ota_status;
-    bool ever_processed = false;
-    int percentage = 0;
+    bool be_timeout = false;
+    int percentage = 0, timeout_cnt = 0;
 
-    int timeout = ota_event_type == CTRL_EVENT_OTA_ESP32_FW ? (60000 * 2) : 60000;  //chunk of esp32 may be larger
+    int timeout_max = ota_event_type == CTRL_EVENT_OTA_ESP32_FW ? (60 * 10) : (60 * 5);  //chunk of esp32 may be larger
 
-    while (xQueueReceive(g_Q_ota_status, &ota_status_q_item, pdMS_TO_TICKS(timeout/*long enough?*/))) {
-        if (ota_status_q_item.ota_src != ota_event_type) break;
-        else ever_processed = true;
+    while (1) {
+        BaseType_t res = xQueueReceive(g_Q_ota_status, &ota_status_q_item, pdMS_TO_TICKS(1000));
+        if (res != pdPASS) {
+            timeout_cnt++;
+            if (timeout_cnt > timeout_max) {
+                be_timeout = true;
+                break;
+            } else
+                continue;
+        }
+
+        timeout_cnt = 0;
+        if (ota_status_q_item.ota_src != ota_event_type) {
+            ESP_LOGW(TAG, "ota status process, wrong ota src, this should not happen!!!");
+            continue;
+        }
 
         if (ota_status_q_item.ota_status.status == OTA_STATUS_DOWNLOADING) {
             int progress = ota_status_q_item.ota_status.percentage;
@@ -829,11 +870,23 @@ static esp_err_t ota_status(int ota_event_type, int total_progress)
         }
     }
 
-    if (!ever_processed) {
+    if (be_timeout) {
         // timeout
         ota_status.status = SENSECRAFT_OTA_STATUS_FAIL;
         ota_status.err_code = ESP_ERR_OTA_TIMEOUT;
         ota_status.percentage = 0;
+        ESP_LOGW(TAG, "ota status, timeout happen, it was a really long waiting (%d sec)!!!", timeout_max);
+        if (ota_event_type == CTRL_EVENT_OTA_ESP32_FW) {
+            xEventGroupSetBits(g_eg_globalsync, EVENT_OTA_STOP_BY_TOO_SLOW);
+        } else if (ota_event_type == CTRL_EVENT_OTA_HIMAX_FW) {
+            if (xEventGroupGetBits(g_eg_globalsync) & EVENT_OTA_HIMAX_HTTP_GOING) {
+                if (g_sscma_writer_userdata.http_client) {
+                    ESP_LOGD(TAG, "force stop the http download for himax fw");
+                    esp_http_client_cancel_request(g_sscma_writer_userdata.http_client);
+                    atomic_store(&g_sscma_writer_abort, true);
+                }
+            }
+        }
     } else if (ret == ESP_OK) {
         // succeed
         ota_status.err_code = ESP_OK;
@@ -864,6 +917,7 @@ static void __mqtt_ota_executor_task(void *p_arg)
     while (1) {
         if (xQueuePeek(g_Q_ota_msg, &ota_msg_cjson, portMAX_DELAY)) {
             if (atomic_load(&g_ota_running)) {
+                ESP_LOGW(TAG, "peek a mqtt ota request, but another ota is going, can't accept 2 ota job, drop this");
                 goto cleanup;  // an ota is under going, might be issued manually by console command, just drop
             }
 
@@ -1000,7 +1054,7 @@ static void __mqtt_ota_executor_task(void *p_arg)
                         // this is blocking
                         esp_err_t ret = ota_status(CTRL_EVENT_OTA_HIMAX_FW, total_progress);
                         if (ret != ESP_OK) {
-                            ESP_LOGW(TAG, "himax firmware ota aborted!!!");
+                            ESP_LOGW(TAG, "himax firmware ota failed overall!!!");
                             //status already reported in ota_status();
                             goto cleanup;
                         } else {
@@ -1030,7 +1084,7 @@ static void __mqtt_ota_executor_task(void *p_arg)
                         // this is blocking
                         esp_err_t ret = ota_status(CTRL_EVENT_OTA_ESP32_FW, total_progress);
                         if (ret != ESP_OK) {
-                            ESP_LOGW(TAG, "esp32 firmware ota aborted!!!");
+                            ESP_LOGW(TAG, "esp32 firmware ota failed overall!!!");
                             //status already reported in ota_status();
                             goto cleanup;
                         } else {
@@ -1166,7 +1220,7 @@ static void __ota_test_task(void *p_arg)
     while (!atomic_load(&g_network_connected_flag)) {
         vTaskDelay(pdMS_TO_TICKS(3000));
     }
-    // vTaskDelay(pdMS_TO_TICKS(3000));
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
     // esp_err_t res = app_ota_esp32_fw_download("https://new.pxspeed.site/factory_firmware.bin");
     // ESP_LOGI(TAG, "test app_ota_esp32_fw_download: 0x%x", res);
@@ -1197,6 +1251,8 @@ esp_err_t app_ota_init(void)
     g_sem_worker_done = xSemaphoreCreateBinary();
     g_sem_sscma_writer_done = xSemaphoreCreateBinary();
 
+    g_eg_globalsync = xEventGroupCreate();
+
     memset(&g_sscma_writer_userdata, 0, sizeof(ota_sscma_writer_userdata_t));
 
     // Q init
@@ -1212,8 +1268,8 @@ esp_err_t app_ota_init(void)
 
     const int q_size2 = 1;
     StaticQueue_t *q_buf2 = heap_caps_calloc(1, sizeof(StaticQueue_t), MALLOC_CAP_INTERNAL);
-    uint8_t *q_storage2 = psram_calloc(1, q_size2 * sizeof(ota_cmd_q_item_t));
-    g_Q_ota_cmd = xQueueCreateStatic(q_size2, sizeof(ota_cmd_q_item_t), q_storage2, q_buf2);
+    uint8_t *q_storage2 = psram_calloc(1, q_size2 * sizeof(ota_job_q_item_t));
+    g_Q_ota_job = xQueueCreateStatic(q_size2, sizeof(ota_job_q_item_t), q_storage2, q_buf2);
 
     // Ringbuffer init
     StaticRingbuffer_t *buffer_struct = (StaticRingbuffer_t *)psram_calloc(1, sizeof(StaticRingbuffer_t));
@@ -1262,17 +1318,22 @@ esp_err_t app_ota_init(void)
 
 esp_err_t app_ota_ai_model_download(char *url, int size_bytes)
 {
+    xEventGroupSetBits(g_eg_globalsync, EVENT_AI_MODEL_DL_PREPARING);
     //check network connection first
     if (!atomic_load(&g_network_connected_flag)) {
         //just booted or network reconnecting, ensure timing for all tasks depending on network
         int i;
         for (i = 0; i < 30; i++) {
             if (atomic_load(&g_network_connected_flag)) break;
+            if (xEventGroupGetBits(g_eg_globalsync) & EVENT_AI_MODEL_DL_EARLY_ABORT)
+                return ESP_ERR_OTA_USER_CANCELED;
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
         if (i == 30) return ESP_ERR_OTA_CONNECTION_FAIL;
         
         for (i = 0; i < 10; i++) {
+            if (xEventGroupGetBits(g_eg_globalsync) & EVENT_AI_MODEL_DL_EARLY_ABORT)
+                return ESP_ERR_OTA_USER_CANCELED;
             if (atomic_load(&g_mqtt_connected_flag)) {
                 vTaskDelay(pdMS_TO_TICKS(2000));  //schedule this behind FW ota from MQTT
                 break;
@@ -1281,18 +1342,20 @@ esp_err_t app_ota_ai_model_download(char *url, int size_bytes)
         }
         //we'll start ai model download anyway, regardless of mqtt connection
     }
+    if (xEventGroupGetBits(g_eg_globalsync) & EVENT_AI_MODEL_DL_EARLY_ABORT)
+        return ESP_ERR_OTA_USER_CANCELED;
 
-    ota_cmd_q_item_t *cmd = psram_calloc(1, sizeof(ota_cmd_q_item_t));
-    cmd->ota_type = OTA_TYPE_AI_MODEL;
-    memcpy(cmd->url, url, strlen(url));
-    cmd->file_size = size_bytes;
+    ota_job_q_item_t *otajob = psram_calloc(1, sizeof(ota_job_q_item_t));
+    otajob->ota_type = OTA_TYPE_AI_MODEL;
+    memcpy(otajob->url, url, strlen(url));
+    otajob->file_size = size_bytes;
 
-    if (xQueueSend(g_Q_ota_cmd, cmd, 0) != pdPASS) {
-        free(cmd);
+    if (xQueueSend(g_Q_ota_job, otajob, 0) != pdPASS) {
+        free(otajob);
         return ESP_ERR_OTA_ALREADY_RUNNING;
     }
 
-    free(cmd);
+    free(otajob);
 
     // block until ai model download completed or failed
     xSemaphoreTake(g_sem_ai_model_downloaded, portMAX_DELAY);
@@ -1303,10 +1366,22 @@ esp_err_t app_ota_ai_model_download(char *url, int size_bytes)
 esp_err_t app_ota_ai_model_download_abort()
 {
     esp_err_t ret = ESP_FAIL;
-    if (atomic_load(&g_ota_running) && g_sscma_writer_userdata.http_client) {
-        ESP_LOGD(TAG, "app_ota_ai_model_download_abort");
+    ESP_LOGI(TAG, "app_ota_ai_model_download_abort ...");
+    if (xEventGroupGetBits(g_eg_globalsync) & EVENT_AI_MODEL_DL_PREPARING) {
+        xEventGroupClearBits(g_eg_globalsync, EVENT_AI_MODEL_DL_PREPARING);
+        xEventGroupSetBits(g_eg_globalsync, EVENT_AI_MODEL_DL_EARLY_ABORT);
+        ESP_LOGD(TAG, "app_ota_ai_model_download_abort aborted in early phase");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        return ESP_OK;
+    }
+    vTaskDelay(pdMS_TO_TICKS(1));  //there's a small gap between EVENT_AI_MODEL_DL_PREPARING and EVENT_OTA_HIMAX_HTTP_GOING
+    if ((xEventGroupGetBits(g_eg_globalsync) & EVENT_OTA_HIMAX_HTTP_GOING) && 
+        g_sscma_writer_userdata.http_client && g_sscma_writer_userdata.ota_type == OTA_TYPE_AI_MODEL)
+    {
         ret = esp_http_client_cancel_request(g_sscma_writer_userdata.http_client);
         atomic_store(&g_sscma_writer_abort, true);
+        ESP_LOGD(TAG, "app_ota_ai_model_download_abort aborted the http download");
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
     return ret;
 }
@@ -1315,14 +1390,14 @@ esp_err_t app_ota_esp32_fw_download(char *url)
 {
     esp_err_t ret = ESP_OK;
 
-    ota_cmd_q_item_t *cmd = psram_calloc(1, sizeof(ota_cmd_q_item_t));
-    cmd->ota_type = OTA_TYPE_ESP32;
-    memcpy(cmd->url, url, strlen(url));
+    ota_job_q_item_t *otajob = psram_calloc(1, sizeof(ota_job_q_item_t));
+    otajob->ota_type = OTA_TYPE_ESP32;
+    memcpy(otajob->url, url, strlen(url));
 
-    if (xQueueSend(g_Q_ota_cmd, cmd, 0) != pdPASS) ret = ESP_ERR_OTA_ALREADY_RUNNING;
+    if (xQueueSend(g_Q_ota_job, otajob, 0) != pdPASS) ret = ESP_ERR_OTA_ALREADY_RUNNING;
 
-    //the ota_cmd_q_item_t is copied into Q, now can be released
-    free(cmd);
+    //the ota_job_q_item_t is copied into Q, now can be released
+    free(otajob);
 
     return ret;
 }
@@ -1331,14 +1406,14 @@ esp_err_t app_ota_himax_fw_download(char *url)
 {
     esp_err_t ret = ESP_OK;
 
-    ota_cmd_q_item_t *cmd = psram_calloc(1, sizeof(ota_cmd_q_item_t));
-    cmd->ota_type = OTA_TYPE_HIMAX;
-    memcpy(cmd->url, url, strlen(url));
+    ota_job_q_item_t *otajob = psram_calloc(1, sizeof(ota_job_q_item_t));
+    otajob->ota_type = OTA_TYPE_HIMAX;
+    memcpy(otajob->url, url, strlen(url));
 
-    if (xQueueSend(g_Q_ota_cmd, cmd, 0) != pdPASS) ret = ESP_ERR_OTA_ALREADY_RUNNING;
+    if (xQueueSend(g_Q_ota_job, otajob, 0) != pdPASS) ret = ESP_ERR_OTA_ALREADY_RUNNING;
 
-    //the ota_cmd_q_item_t is copied into Q, now can be released
-    free(cmd);
+    //the ota_job_q_item_t is copied into Q, now can be released
+    free(otajob);
 
     return ret;
 }

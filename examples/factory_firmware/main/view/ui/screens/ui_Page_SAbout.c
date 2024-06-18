@@ -129,7 +129,7 @@ void ui_Page_SAbout_screen_init(void)
     lv_obj_set_width(ui_snt2, 260);
     lv_obj_set_height(ui_snt2, 50);
     lv_obj_set_align(ui_snt2, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_snt2, "113991275242200003");
+    lv_label_set_text(ui_snt2, "xxxxxxxxxxxxxxxxxx");
     lv_obj_add_flag(ui_snt2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_set_style_text_color(ui_snt2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_snt2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -162,7 +162,7 @@ void ui_Page_SAbout_screen_init(void)
     lv_obj_set_width(ui_euit2, 260);
     lv_obj_set_height(ui_euit2, 50);
     lv_obj_set_align(ui_euit2, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_euit2, "114992872233500085");
+    lv_label_set_text(ui_euit2, "xxxxxxxxxxxxxxxxxx");
     lv_obj_add_flag(ui_euit2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_set_style_text_color(ui_euit2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_euit2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -194,7 +194,7 @@ void ui_Page_SAbout_screen_init(void)
     lv_obj_set_width(ui_blet2, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_blet2, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_blet2, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_blet2, "66666666666");
+    lv_label_set_text(ui_blet2, "xxxxxxxxxxx");
     lv_obj_add_flag(ui_blet2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_set_style_text_color(ui_blet2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_blet2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -226,7 +226,7 @@ void ui_Page_SAbout_screen_init(void)
     lv_obj_set_width(ui_wifit2, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_wifit2, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_align(ui_wifit2, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_wifit2, "12:23:34:45:56:67:78");
+    lv_label_set_text(ui_wifit2, "xx:xx:xx:xx:xx:xx:xx");
     lv_obj_add_flag(ui_wifit2, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_set_style_text_color(ui_wifit2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_wifit2, 255, LV_PART_MAIN | LV_STATE_DEFAULT);

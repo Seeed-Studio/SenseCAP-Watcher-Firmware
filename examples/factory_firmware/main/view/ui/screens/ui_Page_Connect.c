@@ -52,10 +52,10 @@ void ui_Page_Connect_screen_init(void)
     lv_obj_set_style_bg_opa(ui_conn_arcr, 0, LV_PART_KNOB | LV_STATE_DEFAULT);
 
     ui_conn_panel1 = lv_obj_create(ui_Page_Connect);
-    lv_obj_set_width(ui_conn_panel1, 185);
-    lv_obj_set_height(ui_conn_panel1, 82);
+    lv_obj_set_width(ui_conn_panel1, 212);
+    lv_obj_set_height(ui_conn_panel1, 131);
     lv_obj_set_x(ui_conn_panel1, 0);
-    lv_obj_set_y(ui_conn_panel1, -110);
+    lv_obj_set_y(ui_conn_panel1, -101);
     lv_obj_set_align(ui_conn_panel1, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_conn_panel1, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_conn_panel1, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -72,12 +72,12 @@ void ui_Page_Connect_screen_init(void)
     lv_label_set_text(ui_connp11, "Mate");
     lv_obj_set_style_text_color(ui_connp11, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_connp11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_connp11, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_connp11, &ui_font_fbold24, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_connp12 = lv_label_create(ui_conn_panel1);
     lv_obj_set_width(ui_connp12, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_connp12, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_connp12, 93);
+    lv_obj_set_x(ui_connp12, 108);
     lv_obj_set_y(ui_connp12, 0);
     lv_obj_set_align(ui_connp12, LV_ALIGN_LEFT_MID);
     lv_label_set_text(ui_connp12, "(   / 2)");
@@ -89,12 +89,12 @@ void ui_Page_Connect_screen_init(void)
     lv_obj_set_width(ui_connp13, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_connp13, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_connp13, 0);
-    lv_obj_set_y(ui_connp13, -30);
+    lv_obj_set_y(ui_connp13, -39);
     lv_obj_set_align(ui_connp13, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_connp13, "Get SenseCAP");
+    lv_label_set_text(ui_connp13, "Download\nSenseCAP");
     lv_obj_set_style_text_color(ui_connp13, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_connp13, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_connp13, &lv_font_montserrat_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_connp13, &ui_font_fbold24, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_connp14 = lv_label_create(ui_conn_panel1);
     lv_obj_set_width(ui_connp14, LV_SIZE_CONTENT);   /// 1
@@ -108,10 +108,10 @@ void ui_Page_Connect_screen_init(void)
     lv_obj_set_style_text_font(ui_connp14, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_conn_panel2 = lv_obj_create(ui_Page_Connect);
-    lv_obj_set_width(ui_conn_panel2, 185);
-    lv_obj_set_height(ui_conn_panel2, 85);
-    lv_obj_set_x(ui_conn_panel2, 0);
-    lv_obj_set_y(ui_conn_panel2, -110);
+    lv_obj_set_width(ui_conn_panel2, 189);
+    lv_obj_set_height(ui_conn_panel2, 82);
+    lv_obj_set_x(ui_conn_panel2, -6);
+    lv_obj_set_y(ui_conn_panel2, -101);
     lv_obj_set_align(ui_conn_panel2, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_conn_panel2, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_conn_panel2, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -129,12 +129,12 @@ void ui_Page_Connect_screen_init(void)
     lv_label_set_text(ui_connp21, "Bluetooth");
     lv_obj_set_style_text_color(ui_connp21, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_connp21, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_connp21, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_connp21, &ui_font_fbold24, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_connp22 = lv_label_create(ui_conn_panel2);
     lv_obj_set_width(ui_connp22, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_connp22, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_connp22, 98);
+    lv_obj_set_x(ui_connp22, 111);
     lv_obj_set_y(ui_connp22, 0);
     lv_obj_set_align(ui_connp22, LV_ALIGN_LEFT_MID);
     lv_label_set_text(ui_connp22, "(    / 2)");
@@ -151,12 +151,12 @@ void ui_Page_Connect_screen_init(void)
     lv_label_set_text(ui_connp23, "Connect");
     lv_obj_set_style_text_color(ui_connp23, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_connp23, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_connp23, &lv_font_montserrat_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_connp23, &ui_font_fbold24, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_connp24 = lv_label_create(ui_conn_panel2);
     lv_obj_set_width(ui_connp24, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_connp24, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_connp24, 40);
+    lv_obj_set_x(ui_connp24, 50);
     lv_obj_set_y(ui_connp24, 0);
     lv_obj_set_align(ui_connp24, LV_ALIGN_CENTER);
     lv_label_set_text(ui_connp24, "2");

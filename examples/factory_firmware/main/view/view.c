@@ -16,7 +16,6 @@
 
 static const char *TAG = "view";
 
-char sn_data[66];
 uint8_t wifi_page_id;
 lv_obj_t * view_show_img;
 uint8_t shutdown_state = 0;
@@ -25,10 +24,12 @@ static uint8_t battery_per = 0;
 static bool battery_timer_toggle = 0;
 static int battery_flash_count = 0;
 static lv_obj_t * mbox1;
-extern uint8_t task_down;
-extern uint8_t swipe_id; // 0 for shutdown, 1 for factoryreset
+extern uint8_t g_taskdown;
+extern uint8_t g_swipeid; // 0 for shutdown, 1 for factoryreset
 extern int g_dev_binded;
 extern uint8_t g_avarlive;
+extern uint8_t g_tasktype;
+extern uint8_t g_backpage;
 extern lv_obj_t * ui_taskerrt2;
 extern lv_obj_t * ui_task_error;
 
@@ -42,9 +43,11 @@ extern lv_img_dsc_t *g_detected_img_dsc[MAX_IMAGES];
 
 // view_alarm obj extern
 extern lv_obj_t * ui_viewavap;
-extern lv_obj_t * ui_avat1;
-extern lv_obj_t * ui_avabtn1;
-extern lv_obj_t * ui_avabtn2;
+extern lv_obj_t * ui_viewpbtn1;
+extern lv_obj_t * ui_viewpt1;
+extern lv_obj_t * ui_viewpbtn2;
+extern lv_obj_t * ui_viewpt2;
+extern lv_obj_t * ui_viewpbtn3;
 
 extern int g_detect_image_count;
 extern int g_speak_image_count;
@@ -112,6 +115,12 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
                 break;
             }
 
+            case VIEW_EVENT_INFO_OBTAIN:{
+                ESP_LOGI(TAG, "event: VIEW_EVENT_INFO_OBTAIN");
+                view_info_obtain();
+                break;
+            }
+
             case VIEW_EVENT_USAGE_GUIDE_SWITCH:
             {
                 ESP_LOGI(TAG, "event: VIEW_EVENT_USAGE_GUIDE_SWITCH");
@@ -133,6 +142,7 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
 
             case VIEW_EVENT_BAT_DRAIN_SHUTDOWN:{
                 ESP_LOGI(TAG, "event: VIEW_EVENT_BAT_DRAIN_SHUTDOWN");
+                _ui_screen_change(&ui_Page_Battery, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_Battery_screen_init);
                 lv_timer_t *timer = lv_timer_create(toggle_image_visibility, 500, NULL);
                 
                 break;
@@ -146,7 +156,7 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
                 if(is_charging == 1)
                 {
                     shutdown_state = 0;
-                    if(swipe_id==0)
+                    if(g_swipeid==0)
                     {
                         lv_label_set_text(ui_setdownt, "Reboot");
                         lv_label_set_text(ui_sptext, "Swipe to reboot");
@@ -156,7 +166,7 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
                     lv_img_set_src(ui_mainb, &ui_img_battery_charging_png);
                 }else if(is_charging == 0){
                     shutdown_state = 1;
-                    if(swipe_id==0)
+                    if(g_swipeid==0)
                     {
                         lv_label_set_text(ui_setdownt, "Shutdown");
                         lv_label_set_text(ui_sptext, "Swipe to shut down");
@@ -258,17 +268,6 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
                 break;
             }
 
-            case VIEW_EVENT_SN_CODE:{
-                ESP_LOGI(TAG, "event: VIEW_EVENT_SN_CODE");
-                const char* _sn_data = (const char*)event_data;
-                strncpy(sn_data, _sn_data, 66);
-                sn_data[66] = '\0';
-                ESP_LOGI(TAG, "Received SN data: %s", _sn_data);
-                ESP_LOGI(TAG, "sn_data: %s", sn_data);
-
-                break;
-            }
-
             case VIEW_EVENT_BLE_STATUS:{
                 ESP_LOGI(TAG, "event: VIEW_EVENT_BLE_STATUS");
                 bool ble_connect_status = false;
@@ -332,28 +331,52 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
 
             case VIEW_EVENT_TASK_FLOW_START_CURRENT_TASK:{
                 ESP_LOGI(TAG, "event: VIEW_EVENT_TASK_FLOW_START_CURRENT_TASK");
+                g_tasktype = 1;
+                g_taskdown = 0;
+                g_backpage = 1;
+                lv_obj_add_flag(ui_task_error, LV_OBJ_FLAG_HIDDEN);
                 _ui_screen_change(&ui_Page_CurTask3, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_CurTask3_screen_init);
                 break;
             }
 
             case VIEW_EVENT_TASK_FLOW_STOP:{
                 ESP_LOGI(TAG, "event: VIEW_EVENT_TASK_FLOW_STOP");
-                task_down = 1;
                 lv_obj_add_flag(ui_viewavap, LV_OBJ_FLAG_HIDDEN);
                 // event_post_to
-                esp_event_post_to(app_event_loop_handle, VIEW_EVENT_BASE, VIEW_EVENT_ALARM_OFF, &task_down, sizeof(uint8_t), pdMS_TO_TICKS(10000));
-                lv_pm_open_page(g_main, &group_page_template, PM_ADD_OBJS_TO_GROUP, &ui_Page_LocTask, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_LocTask_screen_init);
+                g_taskdown = 1;
+                esp_event_post_to(app_event_loop_handle, VIEW_EVENT_BASE, VIEW_EVENT_ALARM_OFF, &g_taskdown, sizeof(uint8_t), pdMS_TO_TICKS(10000));
+                if(g_tasktype == 0)
+                {
+                    lv_pm_open_page(g_main, &group_page_template, PM_ADD_OBJS_TO_GROUP, &ui_Page_LocTask, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_LocTask_screen_init);
+                }else{
+                    lv_pm_open_page(g_main, &group_page_main, PM_ADD_OBJS_TO_GROUP, &ui_Page_main, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_main_screen_init);
+                    lv_group_focus_obj(ui_mainbtn2);
+                }
                 break;
             }
 
             case VIEW_EVENT_AI_CAMERA_READY:{
                 ESP_LOGI(TAG, "event: VIEW_EVENT_AI_CAMERA_READY");
+                if((lv_scr_act() != ui_Page_ViewAva) && (lv_scr_act() != ui_Page_ViewLive) && (lv_scr_act() != ui_Page_CurTask2) && (lv_scr_act() != ui_Page_CurTask3))
+                {
+                    break;
+                }
                 if(g_avarlive == 0)
                 {
-                    if(lv_scr_act() != ui_Page_ViewAva)lv_pm_open_page(g_main, &group_page_view, PM_ADD_OBJS_TO_GROUP, &ui_Page_ViewAva, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_ViewAva_screen_init);
+                    if(g_dev_binded)
+                    {
+                        if(lv_scr_act() != ui_Page_ViewAva)lv_pm_open_page(g_main, &group_page_view, PM_ADD_OBJS_TO_GROUP, &ui_Page_ViewAva, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_ViewAva_screen_init);
+                    }else{
+                        _ui_screen_change(&ui_Page_flag, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_flag_screen_init);
+                    }
                 }else if(g_avarlive == 1)
                 {
-                    if(lv_scr_act() != ui_Page_ViewLive)lv_pm_open_page(g_main, &group_page_view, PM_ADD_OBJS_TO_GROUP, &ui_Page_ViewLive, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_ViewLive_screen_init);
+                    if(g_dev_binded)
+                    {
+                        if(lv_scr_act() != ui_Page_ViewLive)lv_pm_open_page(g_main, &group_page_view, PM_ADD_OBJS_TO_GROUP, &ui_Page_ViewLive, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_ViewLive_screen_init);
+                    }else{
+                        _ui_screen_change(&ui_Page_flag, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_flag_screen_init);
+                    }
                 }
                 break;
             }
@@ -366,17 +389,25 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
                     _ui_screen_change(&ui_Page_OTA, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_OTA_screen_init);
                 }
                 struct view_data_ota_status * ota_st = (struct view_data_ota_status *)event_data;
-                if(ota_st->status == 0)
-                {
-                    ESP_LOGI(TAG, "OTA download succeeded");
-                }else if (ota_st->status == 1)
+                ESP_LOGI(TAG, "VIEW_EVENT_OTA_STATUS: %d", ota_st->status);
+                if(ota_st->status == 1)
                 {
                     update_ota_progress(ota_st->percentage);
                     lv_label_set_text(ui_otatext, "Updating\nFirmware");
                     lv_obj_add_flag(ui_otaback, LV_OBJ_FLAG_HIDDEN);
-                }else{
+                    lv_obj_add_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_clear_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
+                }else if (ota_st->status == 2)
+                {
+                    ESP_LOGI(TAG, "OTA download succeeded");
+                    lv_label_set_text(ui_otatext, "Update\nSuccessful");
+                    lv_obj_clear_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
+                    lv_img_set_src(ui_otaicon, &ui_img_wifiok_png);
+                    lv_obj_add_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
+                }else if (ota_st->status == 3){
                     ESP_LOGE(TAG, "OTA download failed, error code: %d", ota_st->err_code);
                     lv_label_set_text(ui_otatext, "Update Failed");
+                    lv_obj_clear_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
                     lv_img_set_src(ui_otaicon, &ui_img_error_png);
                     lv_obj_add_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
                     lv_obj_clear_flag(ui_otaback, LV_OBJ_FLAG_HIDDEN);
@@ -400,26 +431,29 @@ static void __view_event_handler(void* handler_args, esp_event_base_t base, int3
         {
             case CTRL_EVENT_OTA_AI_MODEL:{
                 ESP_LOGI(TAG, "event: CTRL_EVENT_OTA_AI_MODEL");
-                if(lv_scr_act() != ui_Page_CurTask2)
+                if(g_taskdown == 0) // if the task is running
                 {
-                    lv_group_remove_all_objs(g_main);
-                    _ui_screen_change(&ui_Page_CurTask2, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_CurTask2_screen_init);
-                }
-                struct view_data_ota_status * ota_st = (struct view_data_ota_status *)event_data;
-                lv_obj_add_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
-                if(ota_st->status == 0)
-                {
-                    ESP_LOGI(TAG, "OTA download succeeded");
-                }else if (ota_st->status == 1)
-                {
-                    lv_obj_clear_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
-                    update_ai_ota_progress(ota_st->percentage);
-                }else{
-                    lv_label_set_text(ui_otatext, "Update Failed");
-                    lv_img_set_src(ui_otaicon, &ui_img_error_png);
-                    lv_obj_add_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
-                    lv_obj_clear_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
-                    ESP_LOGE(TAG, "OTA download failed, error code: %d", ota_st->err_code);
+                    if(lv_scr_act() != ui_Page_CurTask2)
+                    {
+                        lv_group_remove_all_objs(g_main);
+                        _ui_screen_change(&ui_Page_CurTask2, LV_SCR_LOAD_ANIM_FADE_ON, 100, 0, &ui_Page_CurTask2_screen_init);
+                    }
+                    struct view_data_ota_status * ota_st = (struct view_data_ota_status *)event_data;
+                    lv_obj_add_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
+                    if(ota_st->status == 0)
+                    {
+                        ESP_LOGI(TAG, "OTA download succeeded");
+                    }else if (ota_st->status == 1)
+                    {
+                        lv_obj_clear_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
+                        update_ai_ota_progress(ota_st->percentage);
+                    }else{
+                        lv_label_set_text(ui_otatext, "Update Failed");
+                        lv_img_set_src(ui_otaicon, &ui_img_error_png);
+                        lv_obj_add_flag(ui_otaspinner, LV_OBJ_FLAG_HIDDEN);
+                        lv_obj_clear_flag(ui_otaicon, LV_OBJ_FLAG_HIDDEN);
+                        ESP_LOGE(TAG, "OTA download failed, error code: %d", ota_st->err_code);
+                    }
                 }
                 break;
             }
@@ -460,10 +494,6 @@ int view_init(void)
     ESP_ERROR_CHECK(esp_event_handler_instance_register_with(app_event_loop_handle, 
                                                             VIEW_EVENT_BASE, VIEW_EVENT_TIME, 
                                                             __view_event_handler, NULL, NULL)); 
-
-    ESP_ERROR_CHECK(esp_event_handler_instance_register_with(app_event_loop_handle, 
-                                                            VIEW_EVENT_BASE, VIEW_EVENT_SN_CODE, 
-                                                            __view_event_handler, NULL, NULL));
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register_with(app_event_loop_handle, 
                                                             VIEW_EVENT_BASE, VIEW_EVENT_BRIGHTNESS, 
@@ -539,6 +569,10 @@ int view_init(void)
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register_with(app_event_loop_handle, 
                                                             VIEW_EVENT_BASE, VIEW_EVENT_AI_CAMERA_READY, 
+                                                            __view_event_handler, NULL, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register_with(app_event_loop_handle, 
+                                                            VIEW_EVENT_BASE, VIEW_EVENT_INFO_OBTAIN, 
                                                             __view_event_handler, NULL, NULL));
 
     if((bat_per < 1) && (! is_charging))

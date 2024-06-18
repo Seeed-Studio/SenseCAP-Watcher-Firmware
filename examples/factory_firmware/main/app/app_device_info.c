@@ -814,17 +814,11 @@ void __app_device_info_task(void *pvParameter)
     MUTEX_usage_guide = xSemaphoreCreateMutex();
     MUTEX_sdcard_flash_status = xSemaphoreCreateMutex();
 
-    init_sn_from_nvs();
-    init_eui_from_nvs();
-    init_batchid_from_nvs();
-    init_server_code_from_nvs();
     init_brightness_from_nvs();
     init_rgb_switch_from_nvs();
     init_sound_from_nvs();
     init_cloud_service_switch_from_nvs();
     init_ai_service_param_from_nvs();
-    init_usage_guide_switch_from_nvs();
-    init_qrcode_content();
 
     // get spiffs and sdcard status
     __try_check_sdcard_flash();
@@ -953,12 +947,24 @@ static void __event_loop_handler(void *handler_args, esp_event_base_t base, int3
     }
 }
 
-void app_device_info_init()
+void app_device_info_init_early()
 {
 #if CONFIG_ENABLE_FACTORY_FW_DEBUG_LOG
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 #endif
+    // init critical info
+    init_sn_from_nvs();
+    init_eui_from_nvs();
+    init_batchid_from_nvs();
+    init_server_code_from_nvs();
+    init_qrcode_content();
+    init_usage_guide_switch_from_nvs();
 
+    ESP_LOGI(TAG, "device info init early done, qrcode content: %s", (char *)get_qrcode_content());
+}
+
+void app_device_info_init()
+{
     memset(&g_device_status, 0, sizeof(struct view_data_device_status));
     const esp_app_desc_t *app_desc = esp_app_get_description();
     // if newer hw_version come up in the future, we can tell it from the EUI

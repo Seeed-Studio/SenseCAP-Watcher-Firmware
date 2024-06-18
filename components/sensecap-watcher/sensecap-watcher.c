@@ -394,7 +394,7 @@ uint8_t bsp_battery_get_percent(void)
         voltage += bsp_battery_get_voltage();
     }
     voltage /= 10;
-    int percent = (voltage - 3400) * 100 / (4200 - 3400);
+    int percent = (-1 * voltage * voltage + 9016 * voltage - 19189000) / 10000;
     percent = (percent > 100) ? 100 : (percent < 0) ? 0 : percent;
     ESP_LOGI(TAG, "percentage: %d%%", percent);
     return (uint8_t)percent;

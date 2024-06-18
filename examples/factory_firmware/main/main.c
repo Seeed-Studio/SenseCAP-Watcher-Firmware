@@ -153,6 +153,8 @@ void board_init(void)
 
     bsp_codec_volume_set(100, NULL);
     // audio_play_task("/spiffs/echo_en_wake.wav");
+
+    app_device_info_init_early();
 }
 
 

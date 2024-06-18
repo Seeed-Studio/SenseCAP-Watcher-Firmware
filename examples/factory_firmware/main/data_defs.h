@@ -205,7 +205,11 @@ enum {
     VIEW_EVENT_USAGE_GUIDE_SWITCH,
     VIEW_EVENT_SOUND,
     VIEW_EVENT_CLOUD_SERVICE_SWITCH,
+
     VIEW_EVENT_EMOJI_DOWLOAD_BAR,       //Display the progress of emoticon downloads
+
+    VIEW_EVENT_INFO_OBTAIN,
+
     VIEW_EVENT_WIFI_LIST,       //view_data_wifi_list_t
     VIEW_EVENT_WIFI_LIST_REQ,   // NULL
     VIEW_EVENT_WIFI_CONNECT,    // struct view_data_wifi_config

@@ -85,17 +85,22 @@ void ui_Page_brivol_screen_init(void)
     lv_obj_set_style_text_font(ui_bvtitle, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_bvback = lv_btn_create(ui_Page_brivol);
-    lv_obj_set_width(ui_bvback, 60);
-    lv_obj_set_height(ui_bvback, 60);
+    lv_obj_set_width(ui_bvback, 75);
+    lv_obj_set_height(ui_bvback, 75);
     lv_obj_set_x(ui_bvback, 0);
     lv_obj_set_y(ui_bvback, 120);
     lv_obj_set_align(ui_bvback, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_bvback, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
     lv_obj_clear_flag(ui_bvback, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_radius(ui_bvback, 50, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui_bvback, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(ui_bvback, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_bvback, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_bvback, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_img_src(ui_bvback, &ui_img_button_cancel_png, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(ui_bvback, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(ui_bvback, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_bvback, lv_color_hex(0xA9DE2C), LV_PART_MAIN | LV_STATE_FOCUSED);
+    lv_obj_set_style_border_opa(ui_bvback, 255, LV_PART_MAIN | LV_STATE_FOCUSED);
+    lv_obj_set_style_border_width(ui_bvback, 5, LV_PART_MAIN | LV_STATE_FOCUSED);
 
     ui_vp = lv_obj_create(ui_Page_brivol);
     lv_obj_set_width(ui_vp, 380);
@@ -107,6 +112,8 @@ void ui_Page_brivol_screen_init(void)
     lv_obj_set_style_bg_opa(ui_vp, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_color(ui_vp, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(ui_vp, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_vp, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_FOCUSED);
+    lv_obj_set_style_border_opa(ui_vp, 255, LV_PART_MAIN | LV_STATE_FOCUSED);
 
     ui_vslider = lv_slider_create(ui_vp);
     lv_slider_set_value(ui_vslider, 0, LV_ANIM_OFF);

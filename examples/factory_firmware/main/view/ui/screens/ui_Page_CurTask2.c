@@ -18,7 +18,7 @@ void ui_Page_CurTask2_screen_init(void)
     lv_obj_set_x(ui_waittext, 0);
     lv_obj_set_y(ui_waittext, -20);
     lv_obj_set_align(ui_waittext, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_waittext, "Model \ndownloading....");
+    lv_label_set_text(ui_waittext, "Model\ndownloading....");
     lv_obj_set_style_text_color(ui_waittext, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_waittext, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(ui_waittext, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);

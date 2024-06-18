@@ -20,6 +20,9 @@ GroupInfo group_page_ha;
 GroupInfo group_page_brightness;
 GroupInfo group_page_volume;
 GroupInfo group_page_connectapp;
+GroupInfo group_page_guide;
+
+static void lv_pm_obj_group(lv_group_t * group, GroupInfo *groupInfo);
 
 // Function to add objects to the group
 static void addObjToGroup(GroupInfo *groupInfo, lv_obj_t *objects[], int count) {
@@ -44,8 +47,6 @@ static void printGroup(GroupInfo *groupInfo) {
     }
 }
 
-
-static void lv_pm_obj_group(lv_group_t * group, GroupInfo *groupInfo);
 // Function to open page and add group
 void lv_pm_open_page(lv_group_t * group, GroupInfo *groupInfo, pm_operation_t operation, lv_obj_t **target, lv_scr_load_anim_t fademode, int spd, int delay, void (*target_init)(void))
 {
@@ -127,6 +128,7 @@ void initGroup()
     lv_obj_t * brightness_objects[]  = {ui_bslider, ui_bvback};
     lv_obj_t * volume_objects[]      = {ui_vslider, ui_bvback};
     lv_obj_t * connectapp_objects[]  = {ui_connp1, ui_connp2};
+    lv_obj_t * guide_objects[]        = {ui_Page_guide1, ui_Page_guide2};
 
     addObjToGroup(&group_page_main, main_objects, sizeof(main_objects) / sizeof(main_objects[0]));
     addObjToGroup(&group_page_template, template_objects, sizeof(template_objects) / sizeof(template_objects[0]));
@@ -136,6 +138,7 @@ void initGroup()
     addObjToGroup(&group_page_brightness, brightness_objects, sizeof(brightness_objects) / sizeof(brightness_objects[0]));
     addObjToGroup(&group_page_volume, volume_objects, sizeof(volume_objects) / sizeof(volume_objects[0]));
     addObjToGroup(&group_page_connectapp, connectapp_objects, sizeof(connectapp_objects) / sizeof(connectapp_objects[0]));
+    addObjToGroup(&group_page_guide, guide_objects, sizeof(guide_objects) / sizeof(guide_objects[0]));
 }
 
 

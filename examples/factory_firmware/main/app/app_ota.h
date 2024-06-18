@@ -45,6 +45,7 @@ enum {
 #define ESP_ERR_OTA_SSCMA_START_FAIL        0x205
 #define ESP_ERR_OTA_SSCMA_WRITE_FAIL        0x206
 #define ESP_ERR_OTA_SSCMA_INTERNAL_ERR      0x207
+#define ESP_ERR_OTA_WORKERCALL_ERR          0x208
 
 #define ESP_ERR_OTA_JSON_INVALID            0x300
 #define ESP_ERR_OTA_NO_HIMAX_VERSION        0x301
@@ -88,7 +89,7 @@ typedef struct {
     int ota_type;
     char url[1000];  //we need copy url here, allocate large enough memory here
     size_t  file_size;
-} ota_cmd_q_item_t;
+} ota_job_q_item_t;
 
 esp_err_t app_ota_init(void);
 

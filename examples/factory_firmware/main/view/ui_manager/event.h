@@ -33,4 +33,7 @@ void wifiConnectFailed();
 // view alarm panel event
 void ui_event_alarm_panel(lv_event_t * e);
 
+void viewInfoInit();
+void view_info_obtain();
+
 #endif
