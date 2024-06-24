@@ -382,6 +382,7 @@ void breath_effect_task(void *arg)
                 break;
         }
         xSemaphoreGive(__rgb_semaphore);
+        vTaskDelay(pdMS_TO_TICKS(100));
         // Release the semaphore after updating the RGB status
     }
 }
@@ -411,7 +412,7 @@ int app_rgb_init(void)
         ESP_LOGE(RGB_TAG, "Failed to allocate memory for task stack");
         return -1;
     }
-    TaskHandle_t task_handle = xTaskCreateStatic(&breath_effect_task, "app_rgb_task", 4096, &rgb_status_instance, 5, app_rgb_stack, &app_rgb_stack_buffer);
+    TaskHandle_t task_handle = xTaskCreateStatic(&breath_effect_task, "app_rgb_task", 4096, &rgb_status_instance, 3, app_rgb_stack, &app_rgb_stack_buffer);
     if (task_handle == NULL)
     {
         ESP_LOGE(RGB_TAG, "Failed to create task");
