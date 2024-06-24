@@ -126,6 +126,8 @@ caller_context_t peek_caller_context()
  */
 void set_rgb_status(int r, int g, int b, int type, int step, int delay_time)
 {
+    // Take the semaphore to ensure thread safety
+    xSemaphoreTake(__rgb_semaphore, portMAX_DELAY);
     rgb_status_instance.r = r;
     rgb_status_instance.g = g;
     rgb_status_instance.b = b;
@@ -134,6 +136,8 @@ void set_rgb_status(int r, int g, int b, int type, int step, int delay_time)
     rgb_status_instance.delay_time = delay_time;
     rgb_status_instance.max_brightness_led = 255;
     rgb_status_instance.min_brightness_led = 0;
+    // Release the semaphore after updating the RGB status
+    xSemaphoreGive(__rgb_semaphore);
 }
 
 void __select_service_set_rgb(int caller, int service)
@@ -150,9 +154,6 @@ void __select_service_set_rgb(int caller, int service)
     }
 
     ESP_LOGI(RGB_TAG, "Caller_inside: %d, Service_inside: %d", caller, service);
-
-    // Take the semaphore to ensure thread safety
-    xSemaphoreTake(__rgb_semaphore, portMAX_DELAY);
 
     if (__rgb_switch == 1)
     {
@@ -210,9 +211,6 @@ void __select_service_set_rgb(int caller, int service)
 
     // Log the current RGB status
     ESP_LOGI(RGB_TAG, "RGB Status - R: %d, G: %d, B: %d", rgb_status_instance.r, rgb_status_instance.g, rgb_status_instance.b);
-
-    // Release the semaphore after updating the RGB status
-    xSemaphoreGive(__rgb_semaphore);
 }
 
 /**
@@ -327,7 +325,7 @@ void __blink(double interval, bool start)
         {
             is_blinking = false;
             esp_timer_stop(blink_timer_handle);
-            esp_timer_delete(blink_timer_handle);
+            // esp_timer_delete(blink_timer_handle);
             blink_timer_handle = NULL;
         }
     }
@@ -341,13 +339,9 @@ void __blink(double interval, bool start)
  */
 void __flare()
 {
-    // Take the semaphore to ensure thread safety
-    xSemaphoreTake(__rgb_semaphore, portMAX_DELAY);
     vTaskDelay(pdMS_TO_TICKS(5));
     bsp_rgb_set(rgb_status_instance.r, rgb_status_instance.g, rgb_status_instance.b);
     vTaskDelay(pdMS_TO_TICKS(5));
-    // Release the semaphore after updating the RGB status
-    xSemaphoreGive(__rgb_semaphore);
 }
 
 /**
@@ -361,6 +355,8 @@ void breath_effect_task(void *arg)
 {
     while (true)
     {
+        // Take the semaphore to ensure thread safety
+        xSemaphoreTake(__rgb_semaphore, portMAX_DELAY);
         switch (rgb_status_instance.type)
         {
             case 1:
@@ -375,14 +371,18 @@ void breath_effect_task(void *arg)
             case 4:
                 vTaskDelay(pdMS_TO_TICKS(10));
                 bsp_rgb_set(rgb_status_instance.r, rgb_status_instance.g, rgb_status_instance.b);
+                __blink(1, false);
                 vTaskDelay(pdMS_TO_TICKS(5));
                 break;
             default:
                 vTaskDelay(pdMS_TO_TICKS(10));
                 bsp_rgb_set(0, 0, 0);
+                __blink(1, false);
                 vTaskDelay(pdMS_TO_TICKS(5));
                 break;
         }
+        xSemaphoreGive(__rgb_semaphore);
+        // Release the semaphore after updating the RGB status
     }
 }
 
@@ -396,7 +396,6 @@ void breath_effect_task(void *arg)
 int app_rgb_init(void)
 {
     rgb_status_instance = (rgb_status) { .r = 255, .g = 255, .b = 255, .max_brightness_led = 255, .min_brightness_led = 0, .step = 50, .delay_time = 200 };
-
 
     rgb_semaphore = xSemaphoreCreateMutex();
     __rgb_semaphore = xSemaphoreCreateMutex();
