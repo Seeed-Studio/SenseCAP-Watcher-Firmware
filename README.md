@@ -11,7 +11,7 @@ The project provides basic SDK for the SenseCAP Watcher, as well as the examples
 
 Follow instructions in this guide
 [ESP-IDF - Get Started](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html)
-to setup the built toolchain used by SSCMA examples. Currently we're using the latest version `v5.1`.
+to setup the built toolchain used by SSCMA examples. Currently we're using the latest version `v5.2.1`.
 
 ### Clone and Setup the Repository
 
