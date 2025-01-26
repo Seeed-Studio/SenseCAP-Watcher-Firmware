@@ -30,7 +30,7 @@ to setup the built toolchain used by SSCMA examples. Currently we're using the l
 3. Fetch the submodules.
 
     ```sh
-    git submodule update --init
+    git submodule update --init --recursive
     ```
 
 ### Build and Run Examples
