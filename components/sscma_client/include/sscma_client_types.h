@@ -138,6 +138,7 @@ struct sscma_client_t
     int reset_gpio_num;                    /* !< GPIO number of reset pin */
     bool reset_level;                      /* !< Level of reset pin */
     bool inited;                           /* !< Whether inited */
+    volatile bool drop_events;             /* !< Drop event frames (type:1) before JSON parse */
     sscma_client_info_t info;              /* !< Info */
     sscma_client_model_t model;            /* !< Model */
     sscma_client_reply_cb_t on_connect;    /* !< Callback function */

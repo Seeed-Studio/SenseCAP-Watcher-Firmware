@@ -16,6 +16,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_heap_caps.h"
 
 static const char *TAG = "sscma_client.io.spi";
 
@@ -52,6 +53,7 @@ typedef struct
     esp_io_expander_handle_t io_expander; // IO expander
     SemaphoreHandle_t lock;               // Lock
     uint8_t buffer[PACKET_SIZE];
+    uint8_t *dma_rx_bounce;               // pre-allocated internal DMA-safe RX bounce buffer
 } sscma_client_io_spi_t;
 
 esp_err_t sscma_client_new_io_spi_bus(sscma_client_spi_bus_handle_t bus, const sscma_client_io_spi_config_t *io_config, sscma_client_io_handle_t *ret_io)
@@ -117,6 +119,9 @@ esp_err_t sscma_client_new_io_spi_bus(sscma_client_spi_bus_handle_t bus, const s
     spi_client_io->spi_trans_max_bytes = max_trans_bytes;
     ESP_LOGI(TAG, "spi max trans bytes: %d", spi_client_io->spi_trans_max_bytes);
 
+    spi_client_io->dma_rx_bounce = heap_caps_aligned_alloc(4, (MAX_RECIEVE_SIZE + 3) & ~3u, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    ESP_GOTO_ON_FALSE(spi_client_io->dma_rx_bounce, ESP_ERR_NO_MEM, err, TAG, "no mem for dma rx bounce");
+
     *ret_io = &spi_client_io->base;
     ESP_LOGD(TAG, "new spi sscma client io @%p", spi_client_io);
 
@@ -155,6 +160,10 @@ static esp_err_t client_io_spi_del(sscma_client_io_t *io)
     }
     ESP_LOGD(TAG, "del spi sscma client io @%p", spi_client_io);
 
+    if (spi_client_io->dma_rx_bounce)
+    {
+        heap_caps_free(spi_client_io->dma_rx_bounce);
+    }
     free(spi_client_io);
     return ret;
 }
@@ -331,7 +340,7 @@ static esp_err_t client_io_spi_read(sscma_client_io_t *io, void *data, size_t le
             }
 
             trans_len = MAX_RECIEVE_SIZE;
-            spi_trans.rx_buffer = data + i * MAX_RECIEVE_SIZE;
+            size_t dst_off = 0;
             do
             {
                 uint16_t chunk_size = trans_len;
@@ -345,13 +354,16 @@ static esp_err_t client_io_spi_read(sscma_client_io_t *io, void *data, size_t le
                     chunk_size = trans_len;
                     spi_trans.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
                 }
-                spi_trans.length = chunk_size * 8;
+                size_t aligned_len = (chunk_size + 3) & ~3u; // round up to 4 for DMA need_malloc=0
+                spi_trans.length = aligned_len * 8;
                 spi_trans.tx_buffer = NULL;
-                spi_trans.rxlength = chunk_size * 8;
+                spi_trans.rxlength = aligned_len * 8;
+                spi_trans.rx_buffer = spi_client_io->dma_rx_bounce;
                 spi_trans.user = spi_client_io;
                 ret = spi_device_transmit(spi_client_io->spi_dev, &spi_trans);
                 ESP_GOTO_ON_ERROR(ret, err, TAG, "spi transmit (queue) failed");
-                spi_trans.rx_buffer = spi_trans.rx_buffer + chunk_size;
+                memcpy((uint8_t *)data + i * MAX_RECIEVE_SIZE + dst_off, spi_client_io->dma_rx_bounce, chunk_size);
+                dst_off += chunk_size;
                 trans_len -= chunk_size;
             }
             while (trans_len > 0);
@@ -400,7 +412,7 @@ static esp_err_t client_io_spi_read(sscma_client_io_t *io, void *data, size_t le
                 vTaskDelay(pdMS_TO_TICKS(spi_client_io->wait_delay));
             }
             trans_len = remain;
-            spi_trans.rx_buffer = data + packets * MAX_RECIEVE_SIZE;
+            size_t dst_off = 0;
             do
             {
                 uint16_t chunk_size = trans_len;
@@ -414,13 +426,16 @@ static esp_err_t client_io_spi_read(sscma_client_io_t *io, void *data, size_t le
                     chunk_size = trans_len;
                     spi_trans.flags &= ~SPI_TRANS_CS_KEEP_ACTIVE;
                 }
-                spi_trans.length = chunk_size * 8;
+                size_t aligned_len = (chunk_size + 3) & ~3u; // round up to 4 for DMA need_malloc=0
+                spi_trans.length = aligned_len * 8;
                 spi_trans.tx_buffer = NULL;
-                spi_trans.rxlength = chunk_size * 8;
+                spi_trans.rxlength = aligned_len * 8;
+                spi_trans.rx_buffer = spi_client_io->dma_rx_bounce;
                 spi_trans.user = spi_client_io;
                 ret = spi_device_transmit(spi_client_io->spi_dev, &spi_trans);
                 ESP_GOTO_ON_ERROR(ret, err, TAG, "spi transmit (queue) failed");
-                spi_trans.rx_buffer = spi_trans.rx_buffer + chunk_size;
+                memcpy((uint8_t *)data + packets * MAX_RECIEVE_SIZE + dst_off, spi_client_io->dma_rx_bounce, chunk_size);
+                dst_off += chunk_size;
                 trans_len -= chunk_size;
             }
             while (trans_len > 0);

@@ -133,6 +133,18 @@ esp_err_t sscma_client_available(sscma_client_handle_t client, size_t *ret_avail
 esp_err_t sscma_client_register_callback(sscma_client_handle_t client, const sscma_client_callback_t *callback, void *user_ctx);
 
 /**
+ * @brief Enable/disable dropping of event frames (type:1) before JSON parsing.
+ *
+ * When enabled, the process task discards incoming event frames right after
+ * framing (before cJSON_Parse), avoiding the ~8KB internal-SRAM cJSON tree per
+ * frame. Used to protect internal SRAM during memory-sensitive windows (e.g. TLS handshake).
+ *
+ * @param[in] client SCCMA client handle
+ * @param[in] drop true to drop event frames, false to process normally
+ */
+void sscma_client_set_drop_events(sscma_client_handle_t client, bool drop);
+
+/**
  * @brief Clear reply
  *
  * @param[in] reply Reply
